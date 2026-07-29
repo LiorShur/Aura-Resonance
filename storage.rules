@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Quest photos are the only image UGC in v0. The client uploads to its own
+// pending path; the Storage-triggered moderateMedia function does SafeSearch +
+// face blur, writes the processed image, and discards the original. Processed
+// images are read-only to clients; nothing else is world-readable.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    function underSizeLimit() {
+      return request.resource.size < 8 * 1024 * 1024; // 8 MB
+    }
+
+    // Raw upload target: a player may write only under their own uid, images
+    // only, size-capped. They cannot read raw uploads back — only the function
+    // and admins touch these; the original is discarded after processing.
+    match /uploads/{uid}/{attemptId} {
+      allow write: if signedIn() && request.auth.uid == uid
+        && isImage() && underSizeLimit();
+      allow read: if false;
+    }
+
+    // Processed, face-blurred images written by the moderation function.
+    match /media/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+  }
+}

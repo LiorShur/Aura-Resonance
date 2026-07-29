@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-base-900 text-slate-100 font-sans antialiased;
+    /* Respect notches / home indicator on installed PWA. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overscroll-behavior: none;
+  }
+}
+
+@layer components {
+  /* Glassmorphic panel per the concept art. */
+  .glass {
+    @apply border border-white/10 bg-white/5 backdrop-blur-glass;
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "fractures",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "geo.geohash", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "echoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "moderation.status", "order": "ASCENDING" },
+        { "fieldPath": "hidden", "order": "ASCENDING" },
+        { "fieldPath": "geo.geohash", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
