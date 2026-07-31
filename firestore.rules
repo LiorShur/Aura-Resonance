@@ -26,11 +26,12 @@ service cloud.firestore {
         .hasOnly(fields);
     }
 
-    // Users: self may edit vanity fields only. Points/levels/strikes are
-    // function-written and must never appear in a client write.
+    // Users: self may edit vanity fields only. The document is CREATED by the
+    // createProfile function (after the age gate) — never by the client, so that
+    // points/level/strikes can't be seeded to arbitrary values on first write.
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isSelf(uid);
+      allow create: if false;
       allow update: if isSelf(uid)
         && onlyChanging(['displayName', 'avatarSeed', 'lastActiveAt']);
       allow delete: if false;

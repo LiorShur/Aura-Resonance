@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rules": "firebase emulators:exec --project demo-aura-resonance --only firestore \"vitest run --config vitest.rules.config.ts\"",
     "emulators": "firebase emulators:start --project demo-aura-resonance",
     "seed": "tsx scripts/seed-templates.ts && tsx scripts/seed-fractures.ts",
     "seed:verify": "tsx scripts/verify-locations.ts"
@@ -27,6 +28,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",

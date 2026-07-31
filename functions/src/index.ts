@@ -23,3 +23,5 @@ initializeApp();
  * function to serve. Nothing here is authoritative game logic yet.
  */
 export const ping = onCall(() => ({ ok: true, service: 'aura-resonance', v: 0 }));
+
+export { createProfile } from './createProfile.js';
