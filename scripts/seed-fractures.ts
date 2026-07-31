@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { geohashForLocation } from 'geofire-common';
 import { FieldValue } from 'firebase-admin/firestore';
-import { emulatorDb } from './_admin';
+import { seedDb } from './_admin';
 import { loadFractureFeatures } from './verify-locations';
 
 const DATA = fileURLToPath(new URL('./data/fractures.geojson', import.meta.url));
@@ -12,7 +12,7 @@ async function main() {
     JSON.parse(await readFile(DATA, 'utf8')),
   );
 
-  const db = emulatorDb();
+  const db = seedDb();
   const batch = db.batch();
 
   features.forEach((f, i) => {

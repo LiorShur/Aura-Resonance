@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { emulatorDb } from './_admin';
+import { seedDb } from './_admin';
 
 interface Template {
   id: string;
@@ -17,7 +17,7 @@ const DATA = fileURLToPath(new URL('./data/quest-templates.json', import.meta.ur
 
 async function main() {
   const templates: Template[] = JSON.parse(await readFile(DATA, 'utf8'));
-  const db = emulatorDb();
+  const db = seedDb();
 
   const batch = db.batch();
   for (const { id, ...rest } of templates) {
