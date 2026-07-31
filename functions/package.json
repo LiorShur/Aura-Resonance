@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "serve": "npm run build && firebase emulators:start --only functions"
   },
   "dependencies": {

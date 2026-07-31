@@ -48,11 +48,13 @@ export function useFractures(player: LatLng): {
   loading: boolean;
   error: string | null;
   usingSample: boolean;
+  reload: () => void;
 } {
   const [raw, setRaw] = useState<Fracture[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingSample, setUsingSample] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const lastBoundsKey = useRef<string>('');
 
   useEffect(() => {
@@ -107,12 +109,18 @@ export function useFractures(player: LatLng): {
     return () => {
       cancelled = true;
     };
-  }, [player]);
+  }, [player, reloadToken]);
 
   const visible = useMemo(
     () => selectVisibleFractures(raw, player, DISPLAY_RADIUS_M),
     [raw, player],
   );
 
-  return { visible, loading, error, usingSample };
+  // Force a refetch even without moving (e.g. after a Fracture heals).
+  const reload = () => {
+    lastBoundsKey.current = '';
+    setReloadToken((t) => t + 1);
+  };
+
+  return { visible, loading, error, usingSample, reload };
 }

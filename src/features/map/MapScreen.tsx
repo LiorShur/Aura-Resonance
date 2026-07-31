@@ -1,12 +1,11 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { env } from '@/lib/env';
-import { bearingDeg, compassPoint, formatDistance } from '@/lib/geo';
 import { getCurrentPosition } from '@/lib/geolocation';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useSimStore } from '@/sim/simStore';
+import { QuestSheet } from '@/features/quest/QuestSheet';
 import { SchematicMap } from './SchematicMap';
 import { useFractures } from './useFractures';
-import { FRACTURE_STYLE } from './types';
 
 const MapboxMap = lazy(() =>
   import('./MapboxMap').then((m) => ({ default: m.MapboxMap })),
@@ -27,7 +26,7 @@ export function MapScreen() {
   const profile = useAuthStore((s) => s.profile);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { visible, loading, usingSample } = useFractures(player);
+  const { visible, loading, usingSample, reload } = useFractures(player);
 
   // Live mode: seed the initial position once (foreground, on demand only).
   useEffect(() => {
@@ -100,38 +99,17 @@ export function MapScreen() {
         </div>
       )}
 
-      {/* Selected Fracture readout */}
+      {/* Selected Fracture → quest flow */}
       {selected && (
-        <div className="absolute inset-x-0 bottom-0 z-10 p-3">
-          <div className="glass rounded-2xl p-4">
-            <div className="flex items-center gap-2">
-              <span
-                className="grid h-8 w-8 place-items-center rounded-full text-base"
-                style={{ backgroundColor: `${FRACTURE_STYLE[selected.fracture.type].color}22` }}
-              >
-                {FRACTURE_STYLE[selected.fracture.type].glyph}
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-slate-100">
-                  {FRACTURE_STYLE[selected.fracture.type].label} Fracture
-                </p>
-                <p className="text-xs text-slate-400">
-                  {(() => {
-                    const b = bearingDeg(player, selected.fracture.geo);
-                    return `${formatDistance(selected.distanceM)} · ${compassPoint(b)} · check-in ${selected.fracture.radiusM} m`;
-                  })()}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="rounded-lg px-2 py-1 text-xs text-slate-400 hover:text-slate-200"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <QuestSheet
+          key={selected.fracture.id}
+          fracture={selected.fracture}
+          distanceM={selected.distanceM}
+          player={player}
+          isSample={usingSample}
+          onClose={() => setSelectedId(null)}
+          onHealed={reload}
+        />
       )}
     </div>
   );
