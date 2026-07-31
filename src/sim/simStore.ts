@@ -1,32 +1,42 @@
 import { create } from 'zustand';
 import type { LatLng } from '@/lib/geo';
-import { SIM_CENTRE } from './sampleNeighbourhood';
+import type { Fracture } from '@/features/map/types';
+import { getCurrentPosition } from '@/lib/geolocation';
+import { SIM_CENTRE, SAMPLE_FRACTURES, makeSampleFractures } from './sampleNeighbourhood';
 
 /**
- * The sim harness. In sim mode this store IS the GPS: the player position here
- * is what `getCurrentPosition` returns. A fake second player drives co-op flows
- * from a single device. None of this exists in a production build path — read
- * position only through lib/geolocation so features never touch this directly.
+ * The sim harness. In sim mode this store IS the GPS: `player` is what
+ * `getCurrentPosition` returns. `simCentre` is where the map opens and where the
+ * bundled sample Fractures cluster; "use my location" recentres both on a
+ * one-shot real GPS read (no continuous tracking — hard constraint). A fake
+ * second player drives co-op flows from a single device. None of this exists in
+ * a production build path.
  */
 interface SimState {
-  /** The player's simulated position. */
   player: LatLng;
-  /** Optional fake co-op partner, toggled on for co-op testing. */
+  simCentre: LatLng;
+  /** Sample Fractures around simCentre, shown when the database is empty. */
+  sampleFractures: Fracture[];
   secondPlayer: LatLng | null;
-  /** Simulated horizontal accuracy in metres, so range logic can be exercised. */
   accuracyM: number;
+  locating: boolean;
 
   setPlayer: (pos: LatLng) => void;
   teleportTo: (pos: LatLng) => void;
   setAccuracy: (m: number) => void;
   toggleSecondPlayer: () => void;
   setSecondPlayer: (pos: LatLng) => void;
+  /** One-shot: read real GPS, recentre the sim there, cluster samples around it. */
+  useMyLocation: () => Promise<void>;
 }
 
 export const useSimStore = create<SimState>((set, get) => ({
   player: SIM_CENTRE,
+  simCentre: SIM_CENTRE,
+  sampleFractures: SAMPLE_FRACTURES,
   secondPlayer: null,
   accuracyM: 8,
+  locating: false,
 
   setPlayer: (pos) => set({ player: pos }),
   teleportTo: (pos) => set({ player: pos }),
@@ -39,6 +49,19 @@ export const useSimStore = create<SimState>((set, get) => ({
     })),
   setSecondPlayer: (pos) => {
     if (get().secondPlayer) set({ secondPlayer: pos });
+  },
+  useMyLocation: async () => {
+    set({ locating: true });
+    try {
+      const { coords } = await getCurrentPosition();
+      set({
+        player: coords,
+        simCentre: coords,
+        sampleFractures: makeSampleFractures(coords),
+      });
+    } finally {
+      set({ locating: false });
+    }
   },
 }));
 

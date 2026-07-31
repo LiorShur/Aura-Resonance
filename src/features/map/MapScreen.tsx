@@ -4,7 +4,6 @@ import { bearingDeg, compassPoint, formatDistance } from '@/lib/geo';
 import { getCurrentPosition } from '@/lib/geolocation';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useSimStore } from '@/sim/simStore';
-import { SIM_CENTRE } from '@/sim/sampleNeighbourhood';
 import { SchematicMap } from './SchematicMap';
 import { useFractures } from './useFractures';
 import { FRACTURE_STYLE } from './types';
@@ -22,6 +21,7 @@ const MapboxMap = lazy(() =>
  */
 export function MapScreen() {
   const player = useSimStore((s) => s.player);
+  const simCentre = useSimStore((s) => s.simCentre);
   const secondPlayer = useSimStore((s) => s.secondPlayer);
   const setPlayer = useSimStore((s) => s.setPlayer);
   const profile = useAuthStore((s) => s.profile);
@@ -67,7 +67,7 @@ export function MapScreen() {
       {hasToken ? (
         <Suspense fallback={<MapLoading />}>
           <MapboxMap
-            centre={SIM_CENTRE}
+            centre={simCentre}
             fractures={fractures}
             player={player}
             secondPlayer={secondPlayer}
@@ -81,7 +81,7 @@ export function MapScreen() {
         <div className="grid h-full w-full place-items-center bg-base-900">
           <div className="aspect-square h-full max-h-full w-full max-w-[min(100%,100vh)]">
             <SchematicMap
-              centre={SIM_CENTRE}
+              centre={simCentre}
               fractures={fractures}
               player={player}
               secondPlayer={secondPlayer}

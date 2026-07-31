@@ -11,7 +11,7 @@ import { firebase } from '@/lib/firebase';
 import { env } from '@/lib/env';
 import { geohashBounds, type LatLng } from '@/lib/geo';
 import { errorMessage } from '@/lib/errors';
-import { SAMPLE_FRACTURES } from '@/sim/sampleNeighbourhood';
+import { useSimStore } from '@/sim/simStore';
 import { selectVisibleFractures, type RankedFracture } from './selectFractures';
 import type { Fracture } from './types';
 
@@ -84,7 +84,7 @@ export function useFractures(player: LatLng): {
         }
 
         if (byId.size === 0 && env.simMode) {
-          setRaw(SAMPLE_FRACTURES);
+          setRaw(useSimStore.getState().sampleFractures);
           setUsingSample(true);
         } else {
           setRaw([...byId.values()]);
@@ -94,7 +94,7 @@ export function useFractures(player: LatLng): {
         if (cancelled) return;
         // In sim mode, don't let a query failure blank the desk map.
         if (env.simMode) {
-          setRaw(SAMPLE_FRACTURES);
+          setRaw(useSimStore.getState().sampleFractures);
           setUsingSample(true);
         } else {
           setError(errorMessage(e));
