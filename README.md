@@ -32,6 +32,25 @@ npm run seed:verify                # sanity-check seed locations
 Development runs entirely against the emulator on the `demo-aura-resonance`
 project — no real credentials required.
 
+### Demonstrate the quest loop (M5, sim mode)
+
+With `npm run emulators` and `npm run dev` both running, in the app:
+
+1. **Map** → drag your player pin onto a kindness Fracture (sim mode makes the
+   pin draggable — no walking).
+2. Tap the Fracture → **I’m here** (server verifies you’re in range).
+3. **Take / choose photo**, or **Use sim photo** (no camera needed at a desk).
+4. The photo uploads to `uploads/{uid}/{attemptId}`; the `moderateMedia` Storage
+   trigger screens it, blurs any faces, discards the original, and advances the
+   attempt → the Fracture heals and RP lands on your profile.
+5. **Simulate blocked photo** (emulator button) exercises the block path — no
+   heal, plain-language notice, strike recorded.
+
+The emulator has no Vision credentials, so it stubs the verdict (default pass;
+the block button forces a block). Real SafeSearch + face blur run only once
+functions are deployed with the Cloud Vision API enabled — that’s where the
+"real photo with a face is blurred and passes" acceptance check is confirmed.
+
 ## Scripts
 
 | Command | What it does |
