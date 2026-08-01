@@ -25,12 +25,17 @@ device.
 ```bash
 npm i -g firebase-tools            # one-time
 npm run emulators                  # Auth, Firestore, Storage, Functions, UI :4000
-npm run seed                       # quest templates + example Fractures
+npm run seed                       # quest templates + example Fractures (once)
 npm run seed:verify                # sanity-check seed locations
 ```
 
 Development runs entirely against the emulator on the `demo-aura-resonance`
 project — no real credentials required.
+
+`npm run emulators` **persists data** to `./emulator-data` (gitignored): it
+imports on start and exports on exit, so you seed once and keep your Fractures
+across restarts. Quit with Ctrl+C to trigger the export — killing the terminal
+skips it. Use `npm run emulators:clean` for a fresh, in-memory slate.
 
 ### Demonstrate the quest loop (M5, sim mode)
 
@@ -59,7 +64,8 @@ functions are deployed with the Cloud Vision API enabled — that’s where the
 | `npm run build` | Typecheck + production PWA build |
 | `npm run test` | Vitest unit tests |
 | `npm run lint` | ESLint |
-| `npm run emulators` | Firebase emulator suite |
+| `npm run emulators` | Firebase emulator suite (persists to `./emulator-data`) |
+| `npm run emulators:clean` | Emulator suite with a fresh, in-memory slate |
 | `npm run seed` | Seed templates + Fractures into the emulator |
 | `npm run seed:verify` | Structural check of seed Fracture locations |
 
