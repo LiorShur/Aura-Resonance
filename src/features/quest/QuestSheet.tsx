@@ -1,15 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { bearingDeg, compassPoint, formatDistance, type LatLng } from '@/lib/geo';
 import { getCurrentPosition } from '@/lib/geolocation';
 import { errorMessage } from '@/lib/errors';
+import { env } from '@/lib/env';
 import { FRACTURE_STYLE, type Fracture } from '@/features/map/types';
 import { useTemplate } from './templates';
-import { callCheckIn, callVerify, createAttempt, type VerifyResult } from './questApi';
+import { downscaleImage, makeSimPhoto } from './photo';
+import {
+  callCheckIn,
+  callVerify,
+  createAttempt,
+  uploadQuestPhoto,
+  watchAttempt,
+} from './questApi';
 
-type Step = 'intro' | 'checking' | 'checked_in' | 'verifying' | 'done';
+type Step =
+  | 'intro'
+  | 'checking'
+  | 'checked_in'
+  | 'uploading'
+  | 'pending'
+  | 'verifying'
+  | 'done'
+  | 'blocked'
+  | 'review';
 
-const VERIFY_HINT: Record<string, string> = {
-  photo: 'Photo verification arrives in M5 — completing directly for now.',
+// Only the not-yet-built verification types still complete directly.
+const DIRECT_HINT: Record<string, string> = {
   breathing: 'The breathing puzzle arrives in M6 — completing directly for now.',
   session_code: 'Co-op sessions arrive in M8 — completing directly for now.',
 };
@@ -27,12 +44,37 @@ interface QuestSheetProps {
 export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onHealed }: QuestSheetProps) {
   const template = useTemplate(fracture.templateId, fracture.type);
   const style = FRACTURE_STYLE[fracture.type];
+  const isPhoto = template.verification === 'photo';
 
   const [step, setStep] = useState<Step>('intro');
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<VerifyResult | null>(null);
+  const [done, setDone] = useState<{ awarded: number; capped: boolean } | null>(null);
+  const [pendingLong, setPendingLong] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // While a photo is in moderation, watch the attempt for its resolution rather
+  // than leaving the player on a spinner (the trigger writes the outcome).
+  useEffect(() => {
+    if (step !== 'pending' || !attemptId) return;
+    const unsub = watchAttempt(attemptId, (snap) => {
+      if (snap.state === 'verified') {
+        setDone({ awarded: snap.awardedRp ?? 0, capped: snap.awardCapped });
+        setStep('done');
+        onHealed();
+      } else if (snap.state === 'rejected') {
+        setStep('blocked');
+      } else if (snap.state === 'submitted' && snap.heldForReview) {
+        setStep('review');
+      }
+    });
+    const timer = window.setTimeout(() => setPendingLong(true), 25000);
+    return () => {
+      unsub();
+      window.clearTimeout(timer);
+    };
+  }, [step, attemptId, onHealed]);
 
   const imHere = async () => {
     if (isSample) {
@@ -66,14 +108,31 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
     }
   };
 
+  // Non-photo (breathing/session_code): trusted direct completion until M6/M8.
   const complete = async () => {
     if (!attemptId) return;
     setStep('verifying');
     setError(null);
     try {
-      setResult(await callVerify(attemptId));
+      const r = await callVerify(attemptId);
+      setDone({ awarded: r.awarded, capped: r.capped });
       setStep('done');
       onHealed();
+    } catch (e) {
+      setError(errorMessage(e));
+      setStep('checked_in');
+    }
+  };
+
+  const submitPhoto = async (file?: File, sim?: 'pass' | 'flag' | 'block') => {
+    if (!attemptId) return;
+    setError(null);
+    setPendingLong(false);
+    setStep('uploading');
+    try {
+      const blob = file ? await downscaleImage(file) : await makeSimPhoto(template.title);
+      await uploadQuestPhoto(attemptId, blob, sim);
+      setStep('pending');
     } catch (e) {
       setError(errorMessage(e));
       setStep('checked_in');
@@ -103,7 +162,9 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
           </button>
         </div>
 
-        {step !== 'done' && <p className="mb-3 text-sm text-slate-300">{template.prompt}</p>}
+        {step !== 'done' && step !== 'blocked' && step !== 'review' && (
+          <p className="mb-3 text-sm text-slate-300">{template.prompt}</p>
+        )}
 
         {(step === 'intro' || step === 'checking') && (
           <>
@@ -123,26 +184,100 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
           </>
         )}
 
-        {(step === 'checked_in' || step === 'verifying') && (
+        {step === 'checked_in' && (
           <>
             <p className="mb-1 text-sm text-aura-green">You’re here ✓</p>
-            <p className="mb-3 text-xs text-slate-500">{VERIFY_HINT[template.verification]}</p>
-            <button
-              type="button"
-              disabled={step === 'verifying'}
-              onClick={() => void complete()}
-              className="w-full rounded-xl border border-aura-green/40 bg-aura-green/10 px-4 py-3 text-sm font-medium text-aura-green transition hover:bg-aura-green/20 disabled:opacity-50"
-            >
-              {step === 'verifying' ? 'Healing…' : 'Complete quest'}
-            </button>
+
+            {isPhoto ? (
+              <>
+                <p className="mb-3 text-xs text-slate-500">
+                  Add a photo of your act to heal this Fracture. Any faces are automatically
+                  blurred and the original photo is never stored.
+                </p>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void submitPhoto(f);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full rounded-xl border border-aura-green/40 bg-aura-green/10 px-4 py-3 text-sm font-medium text-aura-green transition hover:bg-aura-green/20"
+                >
+                  Take / choose photo
+                </button>
+                {env.simMode && (
+                  <button
+                    type="button"
+                    onClick={() => void submitPhoto()}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10"
+                  >
+                    Use sim photo
+                  </button>
+                )}
+                {env.useEmulator && (
+                  <button
+                    type="button"
+                    onClick={() => void submitPhoto(undefined, 'block')}
+                    className="mt-2 w-full rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2.5 text-xs text-rose-300/80 hover:bg-rose-500/10"
+                  >
+                    Simulate blocked photo (emulator)
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="mb-3 text-xs text-slate-500">{DIRECT_HINT[template.verification]}</p>
+                <button
+                  type="button"
+                  onClick={() => void complete()}
+                  className="w-full rounded-xl border border-aura-green/40 bg-aura-green/10 px-4 py-3 text-sm font-medium text-aura-green transition hover:bg-aura-green/20"
+                >
+                  Complete quest
+                </button>
+              </>
+            )}
           </>
         )}
 
-        {step === 'done' && result && (
+        {(step === 'uploading' || step === 'verifying') && (
+          <p className="py-2 text-sm text-slate-300">
+            {step === 'uploading' ? 'Preparing your photo…' : 'Healing…'}
+          </p>
+        )}
+
+        {step === 'pending' && (
+          <div className="py-1">
+            <p className="text-sm text-aura-cyan">Checking your photo…</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {pendingLong
+                ? 'Still checking — your Fracture will heal once the photo clears. You can close this and check back shortly.'
+                : 'This takes a moment — faces are being blurred and the photo screened for safety.'}
+            </p>
+            {pendingLong && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-200 hover:bg-white/10"
+              >
+                Close
+              </button>
+            )}
+          </div>
+        )}
+
+        {step === 'done' && done && (
           <div className="text-center">
             <p className="font-display text-2xl text-aura-cyan">Fracture healed</p>
             <p className="mt-1 text-sm text-slate-200">
-              {result.awarded > 0 ? `+${result.awarded} RP` : 'Daily cap reached — no RP this time'}
+              {done.awarded > 0 ? `+${done.awarded} RP` : 'Daily cap reached — no RP this time'}
             </p>
             <button
               type="button"
@@ -150,6 +285,40 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
               className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-200 hover:bg-white/10"
             >
               Done
+            </button>
+          </div>
+        )}
+
+        {step === 'blocked' && (
+          <div>
+            <p className="text-sm font-medium text-rose-300">This photo can’t be used</p>
+            <p className="mt-1 text-xs text-slate-400">
+              It didn’t pass our safety check, so no Fracture was healed. Please try a
+              different photo of your act. Repeated issues may limit your account.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-200 hover:bg-white/10"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        {step === 'review' && (
+          <div>
+            <p className="text-sm text-aura-cyan">Thanks — your photo needs a quick check</p>
+            <p className="mt-1 text-xs text-slate-400">
+              We couldn’t auto-clear this one, so a person will take a quick look. If it’s
+              fine, the Fracture heals shortly. The original photo is never stored.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-200 hover:bg-white/10"
+            >
+              Close
             </button>
           </div>
         )}

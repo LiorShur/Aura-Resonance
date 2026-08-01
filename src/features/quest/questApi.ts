@@ -1,5 +1,6 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import { ref, uploadBytes } from 'firebase/storage';
 import { firebase } from '@/lib/firebase';
 import { AppError } from '@/lib/errors';
 import type { LatLng } from '@/lib/geo';
@@ -51,4 +52,56 @@ export async function callVerify(attemptId: string): Promise<VerifyResult> {
     'submitVerification',
   );
   return (await fn({ attemptId })).data;
+}
+
+/**
+ * Upload a quest photo to the player's own pending path. The Storage-triggered
+ * `moderateMedia` function does SafeSearch + face blur, discards this original,
+ * and advances the attempt — the client never writes the outcome. `simVerdict`
+ * is honoured only by the emulator (sim mode), to exercise the flag/block paths.
+ */
+export async function uploadQuestPhoto(
+  attemptId: string,
+  blob: Blob,
+  simVerdict?: 'pass' | 'flag' | 'block',
+): Promise<void> {
+  const uid = firebase().auth.currentUser?.uid;
+  if (!uid) throw new AppError('auth/required', 'Sign in first');
+  const target = ref(firebase().storage, `uploads/${uid}/${attemptId}`);
+  await uploadBytes(target, blob, {
+    contentType: 'image/jpeg',
+    ...(simVerdict ? { customMetadata: { simVerdict } } : {}),
+  });
+}
+
+export type AttemptState =
+  | 'started'
+  | 'checked_in'
+  | 'submitted'
+  | 'verified'
+  | 'rejected'
+  | 'abandoned';
+
+export interface AttemptSnapshot {
+  state: AttemptState;
+  awardedRp: number | null;
+  awardCapped: boolean;
+  heldForReview: boolean;
+}
+
+/** Live-watch an attempt so the UI can react when moderation resolves it. */
+export function watchAttempt(
+  attemptId: string,
+  cb: (snap: AttemptSnapshot) => void,
+): () => void {
+  return onSnapshot(doc(firebase().db, 'questAttempts', attemptId), (d) => {
+    if (!d.exists()) return;
+    const data = d.data();
+    cb({
+      state: (data.state as AttemptState) ?? 'started',
+      awardedRp: data.awardedRp ?? null,
+      awardCapped: Boolean(data.awardCapped ?? false),
+      heldForReview: Boolean(data.heldForReview ?? false),
+    });
+  });
 }
