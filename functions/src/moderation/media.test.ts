@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { safeSearchVerdict } from './media-core.js';
+import { attemptOutcomeForVerdict, safeSearchVerdict, simVerdict } from './media-core.js';
 
 describe('safeSearchVerdict', () => {
   it('passes a clean image', () => {
@@ -26,5 +26,31 @@ describe('safeSearchVerdict', () => {
 
   it('is safe on missing annotation (defensive pass, moderation happens on real data)', () => {
     expect(safeSearchVerdict(null).status).toBe('pass');
+  });
+});
+
+describe('attemptOutcomeForVerdict', () => {
+  it('pass and flag heal the Fracture', () => {
+    expect(attemptOutcomeForVerdict('pass')).toBe('finalize');
+    expect(attemptOutcomeForVerdict('flag')).toBe('finalize');
+  });
+
+  it('block rejects', () => {
+    expect(attemptOutcomeForVerdict('block')).toBe('reject');
+  });
+
+  it('an error holds for review — never heals (fail closed)', () => {
+    expect(attemptOutcomeForVerdict('error')).toBe('hold');
+  });
+});
+
+describe('simVerdict (emulator only)', () => {
+  it('defaults to a clean pass', () => {
+    expect(simVerdict(undefined)).toEqual({ status: 'pass', labels: [] });
+  });
+
+  it('exercises the flag and block paths on demand', () => {
+    expect(simVerdict('flag').status).toBe('flag');
+    expect(simVerdict('block').status).toBe('block');
   });
 });

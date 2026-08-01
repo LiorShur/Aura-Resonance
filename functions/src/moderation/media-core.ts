@@ -41,6 +41,32 @@ export function safeSearchVerdict(
   return { status, labels };
 }
 
+/**
+ * How a media verdict advances the quest attempt (SAFETY §3 outcomes):
+ *   pass/flag → the act is accepted, the Fracture heals (flag is still visible,
+ *               just queued for review); block → rejected + strike; anything else
+ *               (a fail-closed error) → held for human review, never healed.
+ */
+export function attemptOutcomeForVerdict(
+  status: MediaVerdict['status'] | 'error',
+): 'finalize' | 'reject' | 'hold' {
+  if (status === 'pass' || status === 'flag') return 'finalize';
+  if (status === 'block') return 'reject';
+  return 'hold';
+}
+
+/**
+ * Emulator/dev verdict: the functions emulator has no Vision credentials, so the
+ * loop must run without them (sim mode is non-negotiable). Defaults to a clean
+ * pass; an upload may carry `simVerdict` metadata to exercise the flag/block
+ * paths. NEVER used in production — the real Vision call runs there.
+ */
+export function simVerdict(forced: string | undefined): MediaVerdict {
+  if (forced === 'block') return { status: 'block', labels: ['sim'] };
+  if (forced === 'flag') return { status: 'flag', labels: ['sim'] };
+  return { status: 'pass', labels: [] };
+}
+
 interface Vertex {
   x?: number | null;
   y?: number | null;

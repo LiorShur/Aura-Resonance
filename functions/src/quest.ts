@@ -1,14 +1,8 @@
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
-import {
-  computeAward,
-  computeLevel,
-  dayKey,
-  DEFAULT_DAILY_RP_CAP,
-  DEFAULT_LEVEL_THRESHOLDS,
-  evaluateCheckIn,
-} from './quest-core.js';
+import { evaluateCheckIn } from './quest-core.js';
+import { finalizeVerifiedAttempt } from './award.js';
 
 const Position = z.object({ lat: z.number(), lng: z.number() });
 
@@ -20,10 +14,6 @@ const CheckInInput = z.object({
 const VerifyInput = z.object({
   attemptId: z.string().min(1),
 });
-
-// Reward used only if a Fracture references a template that isn't seeded; keeps
-// the loop from dead-ending during development.
-const FALLBACK_REWARD = 20;
 
 /**
  * Verify the player is physically within a Fracture's radius and advance the
@@ -77,11 +67,11 @@ export const submitCheckIn = onCall(async (request) => {
 });
 
 /**
- * Complete a checked-in quest: heal the Fracture, award Resonance Points (subject
- * to the daily cap), and write the ledger entry — all in one transaction so
- * points, level, and the Fracture stay consistent. Per-verification-type proof
- * (photo/breathing/session code) is layered on in M5/M6/M8; here the checked-in
- * attempt is trusted so the loop closes end to end.
+ * Complete a checked-in quest whose proof does NOT need an upload
+ * (breathing/session_code — trusted for now until M6/M8). Photo quests are
+ * deliberately refused here: their only path to `verified` is the
+ * Storage-triggered `moderateMedia`, so a client cannot self-award by calling
+ * this without a photo that passed moderation.
  */
 export const submitVerification = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -92,73 +82,32 @@ export const submitVerification = onCall(async (request) => {
   const { attemptId } = parsed.data;
 
   const db = getFirestore();
-  const now = new Date();
-  const today = dayKey(now);
+  const attemptSnap = await db.doc(`questAttempts/${attemptId}`).get();
+  if (!attemptSnap.exists) throw new HttpsError('not-found', 'attempt');
+  const attempt = attemptSnap.data()!;
+  if (attempt.uid !== uid) throw new HttpsError('permission-denied', 'not-owner');
+  if (attempt.state !== 'checked_in') {
+    throw new HttpsError('failed-precondition', 'attempt-not-checked-in');
+  }
 
-  // Read config once (read-only content) before the transaction.
-  const cfg = (await db.doc('config/progression').get()).data() ?? {};
-  const cap = Number(cfg.dailyRpCap ?? DEFAULT_DAILY_RP_CAP);
-  const thresholds: number[] = Array.isArray(cfg.levels) ? cfg.levels : DEFAULT_LEVEL_THRESHOLDS;
+  const templateSnap = await db.doc(`questTemplates/${attempt.templateId}`).get();
+  const verification = String(templateSnap.data()?.verification ?? 'photo');
+  if (verification === 'photo') {
+    // The photo path advances the attempt via moderateMedia, never here.
+    throw new HttpsError('failed-precondition', 'photo-requires-upload');
+  }
 
-  const attemptRef = db.doc(`questAttempts/${attemptId}`);
-  const userRef = db.doc(`users/${uid}`);
-
-  return db.runTransaction(async (tx) => {
-    const attemptSnap = await tx.get(attemptRef);
-    if (!attemptSnap.exists) throw new HttpsError('not-found', 'attempt');
-    const attempt = attemptSnap.data()!;
-    if (attempt.uid !== uid) throw new HttpsError('permission-denied', 'not-owner');
-    if (attempt.state !== 'checked_in') {
-      throw new HttpsError('failed-precondition', 'attempt-not-checked-in');
-    }
-
-    const fractureRef = db.doc(`fractures/${attempt.fractureId}`);
-    const templateRef = db.doc(`questTemplates/${attempt.templateId}`);
-    const [fractureSnap, templateSnap, userSnap] = await Promise.all([
-      tx.get(fractureRef),
-      tx.get(templateRef),
-      tx.get(userRef),
-    ]);
-    if (!fractureSnap.exists) throw new HttpsError('not-found', 'fracture');
-    if (!userSnap.exists) throw new HttpsError('not-found', 'user');
-
-    const reward = Number(templateSnap.data()?.rpReward ?? FALLBACK_REWARD);
-    const user = userSnap.data()!;
-
-    const daily =
-      user.dailyRp && user.dailyRp.day === today
-        ? { day: today, points: Number(user.dailyRp.points ?? 0) }
-        : { day: today, points: 0 };
-
-    const awarded = computeAward(reward, cap, daily.points);
-    const balanceAfter = Number(user.resonancePoints ?? 0) + awarded;
-    const level = computeLevel(balanceAfter, thresholds);
-    const activeDayBump = user.lastActiveDay === today ? 0 : 1;
-
-    tx.update(attemptRef, { state: 'verified', completedAt: FieldValue.serverTimestamp() });
-    tx.update(fractureRef, {
-      status: 'healed',
-      healCount: FieldValue.increment(1),
-      healedBy: FieldValue.arrayUnion(uid),
-      healedAt: FieldValue.serverTimestamp(),
-    });
-    tx.set(userRef.collection('ledger').doc(), {
-      delta: awarded,
-      reason: 'quest_complete',
-      refId: attemptId,
-      balanceAfter,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-    tx.update(userRef, {
-      resonancePoints: balanceAfter,
-      auraLevel: level,
-      dailyRp: { day: today, points: daily.points + awarded },
-      lastActiveDay: today,
-      lastActiveAt: FieldValue.serverTimestamp(),
-      'stats.questsCompleted': FieldValue.increment(1),
-      'stats.distinctActiveDays': FieldValue.increment(activeDayBump),
-    });
-
-    return { status: 'verified' as const, awarded, balanceAfter, level, capped: awarded < reward };
-  });
+  try {
+    const outcome = await finalizeVerifiedAttempt(db, attemptId, null);
+    return {
+      status: outcome.status,
+      awarded: outcome.awarded,
+      balanceAfter: outcome.balanceAfter,
+      level: outcome.level,
+      capped: outcome.capped,
+    };
+  } catch (err) {
+    const code = err instanceof Error ? err.message : 'verify-failed';
+    throw new HttpsError('failed-precondition', code);
+  }
 });
