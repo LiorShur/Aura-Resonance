@@ -15,6 +15,12 @@ const CRISIS_KEYWORDS: Array<{ category: CrisisCategory; patterns: RegExp[] }> =
       /\bcut(ting)?\s+myself\b/i,
       /\b(no|any)\s+reason\s+to\s+live\b/i,
       /\bbetter\s+off\s+without\s+me\b/i,
+      // Self-referential hopelessness / anhedonia — a risk class, not a phrase.
+      // The crisis screen only runs on personal dilemmas, so "I feel worthless"
+      // is self-directed here; over-routing on this path is the safe direction.
+      /\bi\s*(?:'?m|\s+am|\s+feel|\s+felt|'?ve\s+felt)\s+(?:so\s+|completely\s+|totally\s+|really\s+|utterly\s+)?(?:worthless|hopeless|empty|numb)\b/i,
+      /\bcan'?t\s+get\s+out\s+of\s+bed\b/i,
+      /\b(?:no|not\s+much)\s+point\s+(?:in\s+)?(?:anything|going\s+on|it\s+all|living)\b/i,
     ],
   },
   {
