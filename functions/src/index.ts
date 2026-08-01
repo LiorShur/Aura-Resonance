@@ -32,3 +32,4 @@ export {
   moderateAdvice,
   onReport,
 } from './moderation/triggers.js';
+export { moderateMedia } from './moderation/media.js';

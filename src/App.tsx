@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { env } from './lib/env';
 import { BottomNav, type TabId } from './components/BottomNav';
 import { SimBanner } from './sim/SimBanner';
 import { AuthGate } from './features/auth/AuthGate';
 import { MapScreen } from './features/map/MapScreen';
 import { ProfileScreen } from './features/profile/ProfileScreen';
+import { ModerationQueueScreen } from './features/moderation/ModerationQueueScreen';
 import { PlaceholderScreen } from './components/PlaceholderScreen';
 
 /**
@@ -13,14 +14,28 @@ import { PlaceholderScreen } from './components/PlaceholderScreen';
  * arrives with deep-linkable Fractures in a later milestone.
  */
 export function App() {
+  const route = useHashRoute();
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-base-900">
       {env.simMode && <SimBanner />}
       <AuthGate>
-        <Shell />
+        {/* Unlisted protected route (SAFETY §4). isAdmin() rule is the real gate. */}
+        {route === 'moderation' ? <ModerationQueueScreen /> : <Shell />}
       </AuthGate>
     </div>
   );
+}
+
+/** Minimal hash routing: only the unlisted `#moderation` review route for now. */
+function useHashRoute(): 'moderation' | 'app' {
+  const read = () => (window.location.hash.replace(/^#\/?/, '') === 'moderation' ? 'moderation' : 'app');
+  const [route, setRoute] = useState<'moderation' | 'app'>(read);
+  useEffect(() => {
+    const onChange = () => setRoute(read());
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
+  }, []);
+  return route;
 }
 
 function Shell() {

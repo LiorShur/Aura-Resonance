@@ -272,3 +272,53 @@ describe('content + analytics', () => {
     await assertFails(getDoc(doc(db, 'users', ALICE)));
   });
 });
+
+describe('moderationQueue + reports — admin-gated (SAFETY §4)', () => {
+  it('an ordinary player cannot read the moderation queue', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'moderationQueue', 'q1'), {
+        kind: 'echo',
+        targetPath: 'echoes/e1',
+        reason: 'harassment',
+        state: 'open',
+        createdAt: new Date(),
+      });
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(getDoc(doc(db, 'moderationQueue', 'q1')));
+  });
+
+  it('an admin can read the moderation queue', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'moderationQueue', 'q2'), {
+        kind: 'media',
+        targetPath: 'media/m1',
+        reason: 'classifier_failed_closed',
+        state: 'open',
+        createdAt: new Date(),
+      });
+    });
+    const db = testEnv.authenticatedContext('mod', { admin: true }).firestore();
+    await assertSucceeds(getDoc(doc(db, 'moderationQueue', 'q2')));
+  });
+
+  it('not even an admin can write the queue from a client', async () => {
+    const db = testEnv.authenticatedContext('mod', { admin: true }).firestore();
+    await assertFails(
+      setDoc(doc(db, 'moderationQueue', 'q3'), { kind: 'echo', state: 'open' }),
+    );
+  });
+
+  it('a player can file a report but cannot read reports back', async () => {
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(
+      setDoc(doc(db, 'reports', 'r1'), {
+        reporterUid: ALICE,
+        targetPath: 'echoes/e1',
+        reason: 'abuse',
+        createdAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(getDoc(doc(db, 'reports', 'r1')));
+  });
+});
