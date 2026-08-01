@@ -22,7 +22,11 @@ import {
  * (`uploads/{uid}/{attemptId}`): pass/flag heals the Fracture and awards RP,
  * block rejects and records a strike, a fail-closed error holds for review.
  */
-export const moderateMedia = onObjectFinalized(async (event) => {
+export const moderateMedia = onObjectFinalized(
+  // Image decode + Vision + sharp blur can spike past the 256 MiB default; give
+  // it headroom so a large capture never OOMs mid-moderation.
+  { memory: '512MiB', timeoutSeconds: 120 },
+  async (event) => {
   const filePath = event.data.name;
   if (!filePath || !filePath.startsWith('uploads/')) return; // only raw uploads
 
