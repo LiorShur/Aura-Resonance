@@ -19,6 +19,7 @@ export function SimBanner() {
   const sampleFractures = useSimStore((s) => s.sampleFractures);
   const recentreOnMe = useSimStore((s) => s.useMyLocation);
   const locating = useSimStore((s) => s.locating);
+  const simCentre = useSimStore((s) => s.simCentre);
 
   return (
     <div className="z-30 bg-amber-500/15 text-amber-200">
@@ -44,6 +45,10 @@ export function SimBanner() {
           >
             {locating ? 'Locating…' : '📍 Use my location (recentre here)'}
           </button>
+          <p className="font-mono text-[10px] text-amber-200/60">
+            centre {simCentre.lat.toFixed(5)}, {simCentre.lng.toFixed(5)} — pass to
+            SEED_AT to seed here
+          </p>
           {error && <p className="text-rose-300">{error}</p>}
 
           <div>

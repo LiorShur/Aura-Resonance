@@ -7,10 +7,36 @@ import { loadFractureFeatures } from './verify-locations';
 
 const DATA = fileURLToPath(new URL('./data/fractures.geojson', import.meta.url));
 
+/**
+ * Optional SEED_AT="lat,lng" recentres the whole example arrangement on a point
+ * you choose (e.g. your own neighbourhood), so you can walk the real loop where
+ * you are instead of in the default Tel Aviv area.
+ */
+function recentre(
+  features: Array<{ lat: number; lng: number }>,
+  at: string | undefined,
+): void {
+  if (!at) return;
+  const [lat, lng] = at.split(',').map((s) => Number(s.trim()));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    throw new Error(`SEED_AT must be "lat,lng" (got "${at}")`);
+  }
+  const cLat = features.reduce((s, f) => s + f.lat, 0) / features.length;
+  const cLng = features.reduce((s, f) => s + f.lng, 0) / features.length;
+  const dLat = lat - cLat;
+  const dLng = lng - cLng;
+  for (const f of features) {
+    f.lat += dLat;
+    f.lng += dLng;
+  }
+  console.log(`[seed] recentred fractures on ${lat}, ${lng}`);
+}
+
 async function main() {
   const { features, neighbourhoodId } = loadFractureFeatures(
     JSON.parse(await readFile(DATA, 'utf8')),
   );
+  recentre(features, process.env.SEED_AT);
 
   const db = seedDb();
   const batch = db.batch();
