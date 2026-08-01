@@ -26,3 +26,9 @@ export const ping = onCall(() => ({ ok: true, service: 'aura-resonance', v: 0 })
 
 export { createProfile } from './createProfile.js';
 export { submitCheckIn, submitVerification } from './quest.js';
+export {
+  screenDilemma,
+  moderateEcho,
+  moderateAdvice,
+  onReport,
+} from './moderation/triggers.js';
