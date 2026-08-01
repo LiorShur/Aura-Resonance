@@ -111,9 +111,11 @@ export function useFractures(player: LatLng): {
     };
   }, [player, reloadToken]);
 
+  // Sim-only: ignore night suppression at a desk (see simStore.ignoreNight).
+  const ignoreNight = useSimStore((s) => env.simMode && s.ignoreNight);
   const visible = useMemo(
-    () => selectVisibleFractures(raw, player, DISPLAY_RADIUS_M),
-    [raw, player],
+    () => selectVisibleFractures(raw, player, DISPLAY_RADIUS_M, new Date(), ignoreNight),
+    [raw, player, ignoreNight],
   );
 
   // Force a refetch even without moving (e.g. after a Fracture heals).

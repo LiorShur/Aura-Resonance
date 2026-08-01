@@ -17,10 +17,14 @@ export function selectVisibleFractures(
   player: LatLng,
   radiusM: number,
   now: Date = new Date(),
+  ignoreNight = false,
 ): RankedFracture[] {
   const out: RankedFracture[] = [];
   for (const f of all) {
-    if (!isActiveNow(f, now)) continue;
+    // `ignoreNight` is a sim-only desk override: still respect a healed/inactive
+    // Fracture, but skip the 21:00–06:00 suppression so testing works after dark.
+    const active = ignoreNight ? f.status === 'active' : isActiveNow(f, now);
+    if (!active) continue;
     const d = distanceM(player, f.geo);
     if (d <= radiusM) out.push({ fracture: f, distanceM: d });
   }

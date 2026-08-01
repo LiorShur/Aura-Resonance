@@ -20,12 +20,19 @@ interface SimState {
   secondPlayer: LatLng | null;
   accuracyM: number;
   locating: boolean;
+  /**
+   * Desk-dev override for night suppression (SAFETY §5). Seeded Fractures are
+   * hidden 21:00–06:00 local; at a desk after dark that blanks the map, so sim
+   * mode ignores night by default. Turn off to verify the real suppression.
+   */
+  ignoreNight: boolean;
 
   setPlayer: (pos: LatLng) => void;
   teleportTo: (pos: LatLng) => void;
   setAccuracy: (m: number) => void;
   toggleSecondPlayer: () => void;
   setSecondPlayer: (pos: LatLng) => void;
+  toggleIgnoreNight: () => void;
   /** One-shot: read real GPS, recentre the sim there, cluster samples around it. */
   useMyLocation: () => Promise<void>;
 }
@@ -37,10 +44,12 @@ export const useSimStore = create<SimState>((set, get) => ({
   secondPlayer: null,
   accuracyM: 8,
   locating: false,
+  ignoreNight: true,
 
   setPlayer: (pos) => set({ player: pos }),
   teleportTo: (pos) => set({ player: pos }),
   setAccuracy: (m) => set({ accuracyM: m }),
+  toggleIgnoreNight: () => set((s) => ({ ignoreNight: !s.ignoreNight })),
   toggleSecondPlayer: () =>
     set((s) => ({
       secondPlayer: s.secondPlayer

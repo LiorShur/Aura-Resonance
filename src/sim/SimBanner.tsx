@@ -20,6 +20,8 @@ export function SimBanner() {
   const recentreOnMe = useSimStore((s) => s.useMyLocation);
   const locating = useSimStore((s) => s.locating);
   const simCentre = useSimStore((s) => s.simCentre);
+  const ignoreNight = useSimStore((s) => s.ignoreNight);
+  const toggleIgnoreNight = useSimStore((s) => s.toggleIgnoreNight);
 
   return (
     <div className="z-30 bg-amber-500/15 text-amber-200">
@@ -87,6 +89,18 @@ export function SimBanner() {
           >
             {secondPlayer ? 'Remove' : 'Add'} fake co-op partner
           </button>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={ignoreNight}
+              onChange={toggleIgnoreNight}
+              className="accent-amber-400"
+            />
+            <span className="text-amber-200/70">
+              Ignore night suppression (show Fractures after 21:00)
+            </span>
+          </label>
         </div>
       )}
     </div>

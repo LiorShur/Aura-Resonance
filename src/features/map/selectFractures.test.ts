@@ -55,4 +55,16 @@ describe('selectVisibleFractures', () => {
     const r = selectVisibleFractures([healed], CENTRE, 200, NOON);
     expect(r).toHaveLength(0);
   });
+
+  it('ignoreNight (sim desk override) shows a night-suppressed fracture but still hides healed ones', () => {
+    const daytimeOnly = frac('day', 32.0854, 34.7819, { from: 6, to: 21 });
+    const midnight = new Date('2026-07-31T23:30:00');
+    // Suppressed at night normally…
+    expect(selectVisibleFractures([daytimeOnly], CENTRE, 200, midnight)).toHaveLength(0);
+    // …but visible with the desk override.
+    expect(selectVisibleFractures([daytimeOnly], CENTRE, 200, midnight, true)).toHaveLength(1);
+    // The override does not resurrect a healed Fracture.
+    const healed: Fracture = { ...daytimeOnly, id: 'healed', status: 'healed' };
+    expect(selectVisibleFractures([healed], CENTRE, 200, midnight, true)).toHaveLength(0);
+  });
 });
