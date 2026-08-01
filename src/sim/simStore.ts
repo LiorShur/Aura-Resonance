@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LatLng } from '@/lib/geo';
 import type { Fracture } from '@/features/map/types';
-import { getCurrentPosition } from '@/lib/geolocation';
+import { readDeviceGps } from '@/lib/geolocation';
 import { SIM_CENTRE, SAMPLE_FRACTURES, makeSampleFractures } from './sampleNeighbourhood';
 
 /**
@@ -53,7 +53,7 @@ export const useSimStore = create<SimState>((set, get) => ({
   useMyLocation: async () => {
     set({ locating: true });
     try {
-      const { coords } = await getCurrentPosition();
+      const { coords } = await readDeviceGps();
       set({
         player: coords,
         simCentre: coords,

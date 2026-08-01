@@ -35,6 +35,12 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
   const [result, setResult] = useState<VerifyResult | null>(null);
 
   const imHere = async () => {
+    if (isSample) {
+      setError(
+        'This is a sample Fracture. Seed your database (npm run seed:live, or run the emulator) to complete real quests.',
+      );
+      return;
+    }
     setStep('checking');
     setError(null);
     setRemaining(null);

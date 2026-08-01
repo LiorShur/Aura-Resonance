@@ -21,11 +21,18 @@ export async function getCurrentPosition(): Promise<Position> {
     const { player, accuracyM } = simSnapshot();
     return { coords: player, accuracyM };
   }
+  return readDeviceGps();
+}
 
+/**
+ * Always reads the REAL device GPS, bypassing the sim seam. Used by the sim
+ * "use my location" control so it recentres on where you actually are even in
+ * sim mode. Requires a secure context (HTTPS or localhost).
+ */
+export async function readDeviceGps(): Promise<Position> {
   if (!('geolocation' in navigator)) {
     throw new AppError('geo/no-position', 'Geolocation is not available on this device');
   }
-
   return new Promise<Position>((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ coords: { lat: p.coords.latitude, lng: p.coords.longitude }, accuracyM: p.coords.accuracy }),

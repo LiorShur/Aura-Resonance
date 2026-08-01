@@ -68,6 +68,13 @@ export function MapboxMap(props: MapboxMapProps) {
     });
     mapRef.current = map;
 
+    // Guard against the map initialising before its container has its final
+    // size (React dev double-mount, late fl/grid layout): repaint on load and on
+    // any container resize, or markers land off the rendered canvas until a pan.
+    map.on('load', () => map.resize());
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+
     const pEl = dotEl('#4fd6ff', true);
     const pm = new mapboxgl.Marker({ element: pEl, draggable: props.draggable })
       .setLngLat([props.player.lng, props.player.lat])
@@ -83,6 +90,7 @@ export function MapboxMap(props: MapboxMapProps) {
     return () => {
       // map.remove() detaches every marker it owns; the component (and its refs)
       // is torn down with it, so there is nothing else to clean up.
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
