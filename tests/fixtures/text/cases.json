@@ -1,0 +1,53 @@
+{
+  "_note": "General text-moderation fixtures (SAFETY.md §3). expect one of pass/flag/block. 'block' = harmful (never visible, strike); 'flag' = borderline (queued); 'pass' = safe. Some are catchable by the keyword pre-filter (pii, solicitation); the rest need the classifier.",
+  "cases": [
+    { "text": "You matter more than you know. Have a gentle day.", "expect": "pass" },
+    { "text": "Someone left a coffee for the next person here. Pay it forward.", "expect": "pass" },
+    { "text": "This bench has the best view of the sunset. Sit a while.", "expect": "pass" },
+    { "text": "Whoever needs to hear this: you're doing better than you think.", "expect": "pass" },
+    { "text": "Thanks to the stranger who helped me carry my bags today.", "expect": "pass" },
+    { "text": "Take a breath. You've made it through every hard day so far.", "expect": "pass" },
+    { "text": "Free hugs at the park on Saturdays, come say hi to the community group.", "expect": "pass" },
+    { "text": "I planted a tree here last spring. Watch it grow with me.", "expect": "pass" },
+    { "text": "Be kind to the cleaners here, they work hard and go unseen.", "expect": "pass" },
+    { "text": "Lost a glove near the fountain? I hung it on the railing.", "expect": "pass" },
+    { "text": "Smile at one stranger today. It's a small kind of magic.", "expect": "pass" },
+    { "text": "This spot helped me through a rough patch. Hope it helps you too.", "expect": "pass" },
+    { "text": "Community litter pick this Sunday at 10, all welcome.", "expect": "pass" },
+    { "text": "You're allowed to rest. Productivity is not your worth.", "expect": "pass" },
+
+    { "text": "You're an idiot and everyone here thinks you're pathetic.", "expect": "block" },
+    { "text": "Nobody likes you, just give up already.", "expect": "block" },
+    { "text": "Whoever wrote the last note is a worthless loser.", "expect": "flag" },
+    { "text": "Ugh people like you ruin everything, so annoying.", "expect": "flag" },
+    { "text": "Go back to where you came from, you don't belong here.", "expect": "block" },
+    { "text": "This neighbourhood was better before those people moved in.", "expect": "block" },
+    { "text": "I hate everyone from that group, they're all the same.", "expect": "block" },
+
+    { "text": "Call me sometime, my number is 072 555 1234.", "expect": "block" },
+    { "text": "Reach me at jane.doe@example.com if you want to chat.", "expect": "block" },
+    { "text": "I live at 42 Rothschild Avenue, come by any time.", "expect": "block" },
+    { "text": "Her name is Sarah Cohen and she lives on King George Street.", "expect": "block" },
+    { "text": "My cell is +972 54 123 4567, text me!", "expect": "block" },
+
+    { "text": "Add me on WhatsApp for a great crypto opportunity!", "expect": "block" },
+    { "text": "DM me on Instagram @deals to make money fast.", "expect": "block" },
+    { "text": "Text me at this number to join my Telegram group.", "expect": "block" },
+    { "text": "Snapchat me for exclusive content, you won't regret it.", "expect": "block" },
+    { "text": "Message me on WhatsApp, I have an investment for you.", "expect": "block" },
+
+    { "text": "BUY NOW!!! Best prices!!! Click here!!! Limited offer!!!", "expect": "flag" },
+    { "text": "Make $5000 a week from home, guaranteed, sign up today.", "expect": "flag" },
+    { "text": "FREE FREE FREE gift cards click the link in my bio", "expect": "flag" },
+    { "text": "Congratulations you have won a prize, claim it now!", "expect": "flag" },
+    { "text": "Cheap followers and likes, best rates, order today.", "expect": "flag" },
+    { "text": "Promo promo promo everything must go, huge discounts!", "expect": "flag" },
+
+    { "text": "You're so stupid it's honestly impressive, do everyone a favour.", "expect": "block" },
+    { "text": "People who use this app are all sad and lonely, lol.", "expect": "flag" },
+    { "text": "Keep it up, this little garden makes my walk better every day.", "expect": "pass" },
+    { "text": "I forgive you. Whatever happened, you can start again here.", "expect": "pass" },
+    { "text": "Shut up nobody asked for your opinion, freak.", "expect": "block" },
+    { "text": "The volunteers here are angels, thank you for what you do.", "expect": "pass" }
+  ]
+}
