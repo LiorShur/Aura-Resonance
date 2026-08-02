@@ -21,6 +21,7 @@
       "collectionGroup": "empathySubmissions",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "safetyScreen.status", "order": "ASCENDING" },
         { "fieldPath": "state", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]

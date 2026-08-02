@@ -116,44 +116,79 @@ const toAdvice = (id: string, d: Record<string, unknown>): Advice => ({
   createdAt: d.createdAt as Timestamp | undefined,
 });
 
+type ErrCb = (message: string) => void;
+
 /** Live-watch a single submission (the author's own, to track screen status). */
-export function watchSubmission(id: string, cb: (s: Submission | null) => void): () => void {
-  return onSnapshot(doc(firebase().db, 'empathySubmissions', id), (d) =>
-    cb(d.exists() ? toSubmission(d.id, d.data()) : null),
+export function watchSubmission(
+  id: string,
+  cb: (s: Submission | null) => void,
+  onError?: ErrCb,
+): () => void {
+  return onSnapshot(
+    doc(firebase().db, 'empathySubmissions', id),
+    (d) => cb(d.exists() ? toSubmission(d.id, d.data()) : null),
+    (e) => onError?.(e.message),
   );
 }
 
-/** The advice pool: open, screened submissions, newest first. */
-export function watchOpenPool(cb: (subs: Submission[]) => void): () => void {
+/**
+ * The advice pool: open, screened submissions, newest first. Both `state==open`
+ * AND `safetyScreen.status==passed` are required in the query — not just because
+ * the data has both, but because the security rule's read condition names both,
+ * and Firestore rejects a query that doesn't constrain every field the rule
+ * checks (that rejection is what silently hung the list before).
+ */
+export function watchOpenPool(cb: (subs: Submission[]) => void, onError?: ErrCb): () => void {
   const q = query(
     collection(firebase().db, 'empathySubmissions'),
+    where('safetyScreen.status', '==', 'passed'),
     where('state', '==', 'open'),
     orderBy('createdAt', 'desc'),
     limit(30),
   );
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => toSubmission(d.id, d.data()))));
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => toSubmission(d.id, d.data()))),
+    (e) => onError?.(e.message),
+  );
 }
 
 /** The signed-in author's own submissions, newest first. */
-export function watchMySubmissions(uid: string, cb: (subs: Submission[]) => void): () => void {
+export function watchMySubmissions(
+  uid: string,
+  cb: (subs: Submission[]) => void,
+  onError?: ErrCb,
+): () => void {
   const q = query(
     collection(firebase().db, 'empathySubmissions'),
     where('authorUid', '==', uid),
     orderBy('createdAt', 'desc'),
     limit(30),
   );
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => toSubmission(d.id, d.data()))));
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => toSubmission(d.id, d.data()))),
+    (e) => onError?.(e.message),
+  );
 }
 
 /** Passed advice for a submission (rules only expose moderation-passed advice). */
-export function watchAdvice(submissionId: string, cb: (advice: Advice[]) => void): () => void {
+export function watchAdvice(
+  submissionId: string,
+  cb: (advice: Advice[]) => void,
+  onError?: ErrCb,
+): () => void {
   const q = query(
     collection(firebase().db, 'empathyAdvice'),
     where('submissionId', '==', submissionId),
     where('moderation.status', '==', 'pass'),
     orderBy('createdAt', 'asc'),
   );
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => toAdvice(d.id, d.data()))));
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => toAdvice(d.id, d.data()))),
+    (e) => onError?.(e.message),
+  );
 }
 
 interface SeededLine {

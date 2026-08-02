@@ -12,6 +12,17 @@ function anthropic(): Anthropic {
 }
 
 /**
+ * The functions emulator has no Anthropic key, and the whole empathy loop must be
+ * demonstrable at a desk (sim mode is non-negotiable). When running in the
+ * emulator without a key, the LLM step is stubbed to a benign result — but only
+ * after the keyword pre-filter has already run (classify.ts), so crisis keywords
+ * still route and obvious bad text is still caught. Never active in production,
+ * where FUNCTIONS_EMULATOR is unset and a real key is required.
+ */
+const emulatorNoKey = () =>
+  process.env.FUNCTIONS_EMULATOR === 'true' && !process.env.ANTHROPIC_API_KEY;
+
+/**
  * Extract the JSON object from the model's reply. If the reply isn't clean JSON,
  * this throws — and the caller (classify.ts) turns any throw into the fail-closed
  * outcome, so a malformed classification can never be treated as "safe".
@@ -38,6 +49,7 @@ const CRISIS_SYSTEM =
   '. Respond with ONLY a JSON object of the form {"category":"<category>"} and nothing else.';
 
 export const crisisClassifier: CrisisClassifier = async (text) => {
+  if (emulatorNoKey()) return { category: 'ok' };
   const message = await anthropic().messages.create({
     model: MODEL,
     max_tokens: 64,
@@ -65,6 +77,7 @@ const TEXT_SYSTEM =
   '{"verdict":"pass|flag|block","categories":["..."]} and nothing else.';
 
 export const textClassifier: TextClassifier = async (text) => {
+  if (emulatorNoKey()) return { verdict: 'pass', categories: [] };
   const message = await anthropic().messages.create({
     model: MODEL,
     max_tokens: 128,

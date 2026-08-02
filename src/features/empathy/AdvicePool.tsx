@@ -8,9 +8,11 @@ import { ReportButton } from './ReportButton';
 export function AdvicePool() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [subs, setSubs] = useState<Submission[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => watchOpenPool(setSubs), []);
+  useEffect(() => watchOpenPool(setSubs, setError), []);
 
+  if (error) return <p className="text-sm text-rose-300">Couldn't load the pool: {error}</p>;
   if (!subs) return <p className="text-sm text-slate-500">Loading the pool…</p>;
   // Never advise your own submission (also enforced server-side).
   const pool = subs.filter((s) => s.authorUid !== uid);
