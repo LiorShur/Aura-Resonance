@@ -3,6 +3,7 @@ import {
   collection,
   endAt,
   getDocs,
+  limit,
   orderBy,
   query,
   startAt,
@@ -47,6 +48,13 @@ export interface FractureDebug {
   rawCount: number;
   /** Distance to the nearest fetched Fracture (m), or null when none fetched. */
   nearestM: number | null;
+  /**
+   * Dev probe: unfiltered count of the whole `fractures` collection as the
+   * client sees it (bypasses geohash + distance). null = still loading,
+   * -1 = read error/denied. Distinguishes "app can't see the data at all" from
+   * "data is there but filtered out by location".
+   */
+  dbTotal: number | null;
 }
 
 export function useFractures(player: LatLng): {
@@ -62,7 +70,20 @@ export function useFractures(player: LatLng): {
   const [error, setError] = useState<string | null>(null);
   const [usingSample, setUsingSample] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [dbTotal, setDbTotal] = useState<number | null>(null);
   const lastBoundsKey = useRef<string>('');
+
+  // Dev-only: does the client see ANY fractures, ignoring geohash + distance?
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let cancelled = false;
+    getDocs(query(collection(firebase().db, 'fractures'), limit(50)))
+      .then((s) => !cancelled && setDbTotal(s.size))
+      .catch(() => !cancelled && setDbTotal(-1));
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
 
   useEffect(() => {
     const bounds = geohashBounds(player, FETCH_RADIUS_M);
@@ -134,8 +155,12 @@ export function useFractures(player: LatLng): {
   const debug = useMemo<FractureDebug>(() => {
     let nearest = Infinity;
     for (const f of raw) nearest = Math.min(nearest, distanceM(player, f.geo));
-    return { rawCount: raw.length, nearestM: raw.length ? Math.round(nearest) : null };
-  }, [raw, player]);
+    return {
+      rawCount: raw.length,
+      nearestM: raw.length ? Math.round(nearest) : null,
+      dbTotal,
+    };
+  }, [raw, player, dbTotal]);
 
   return { visible, loading, error, usingSample, reload, debug };
 }

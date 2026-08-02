@@ -101,7 +101,8 @@ export function MapScreen() {
 
       {import.meta.env.DEV && (
         <div className="pointer-events-none absolute bottom-24 left-1 z-20 rounded bg-black/75 px-2 py-1 font-mono text-[10px] leading-tight text-cyan-300">
-          fetched {debug.rawCount} · visible {visible.length}
+          db {debug.dbTotal === null ? '…' : debug.dbTotal} · fetched {debug.rawCount} · visible{' '}
+          {visible.length}
           {usingSample ? ' · SAMPLE' : ''}
           {loading ? ' · loading' : ''}
           {error ? ' · ERR' : ''}
