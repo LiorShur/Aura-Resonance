@@ -13,6 +13,11 @@ const CheckInInput = z.object({
 
 const VerifyInput = z.object({
   attemptId: z.string().min(1),
+  // Breathing quests self-report completed cycles (no sensor — same trust model
+  // as any non-photo completion; RP is capped regardless). Optional so other
+  // non-photo verifications can call without it.
+  breathingCyclesCompleted: z.number().int().min(0).max(50).optional(),
+  breathingSkipped: z.boolean().optional(),
 });
 
 /**
@@ -79,7 +84,7 @@ export const submitVerification = onCall(async (request) => {
 
   const parsed = VerifyInput.safeParse(request.data);
   if (!parsed.success) throw new HttpsError('invalid-argument', 'Bad verification');
-  const { attemptId } = parsed.data;
+  const { attemptId, breathingCyclesCompleted, breathingSkipped } = parsed.data;
 
   const db = getFirestore();
   const attemptSnap = await db.doc(`questAttempts/${attemptId}`).get();
@@ -97,8 +102,14 @@ export const submitVerification = onCall(async (request) => {
     throw new HttpsError('failed-precondition', 'photo-requires-upload');
   }
 
+  const extra: Record<string, unknown> = {};
+  if (breathingCyclesCompleted !== undefined) {
+    extra.breathingCyclesCompleted = breathingCyclesCompleted;
+  }
+  if (breathingSkipped !== undefined) extra.breathingSkipped = breathingSkipped;
+
   try {
-    const outcome = await finalizeVerifiedAttempt(db, attemptId, null);
+    const outcome = await finalizeVerifiedAttempt(db, attemptId, null, extra);
     return {
       status: outcome.status,
       awarded: outcome.awarded,

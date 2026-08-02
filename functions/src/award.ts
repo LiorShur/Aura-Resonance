@@ -38,6 +38,7 @@ export async function finalizeVerifiedAttempt(
   db: Firestore,
   attemptId: string,
   mediaId: string | null = null,
+  extra: Record<string, unknown> = {},
 ): Promise<AwardOutcome> {
   const now = new Date();
   const today = dayKey(now);
@@ -97,6 +98,7 @@ export async function finalizeVerifiedAttempt(
       awardedLevel: level,
       balanceAfter,
       completedAt: FieldValue.serverTimestamp(),
+      ...extra,
     });
     tx.update(fractureRef, {
       status: 'healed',
