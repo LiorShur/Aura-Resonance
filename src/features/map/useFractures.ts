@@ -55,6 +55,8 @@ export interface FractureDebug {
    * "data is there but filtered out by location".
    */
   dbTotal: number | null;
+  /** Dev probe: first doc's coords + whether it carries a geohash field. */
+  probe0: { lat: number; lng: number; hasGeohash: boolean } | null;
 }
 
 export function useFractures(player: LatLng): {
@@ -71,14 +73,29 @@ export function useFractures(player: LatLng): {
   const [usingSample, setUsingSample] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [dbTotal, setDbTotal] = useState<number | null>(null);
+  const [probe0, setProbe0] = useState<FractureDebug['probe0']>(null);
   const lastBoundsKey = useRef<string>('');
 
   // Dev-only: does the client see ANY fractures, ignoring geohash + distance?
+  // Also inspect the first doc so we can see its coords + geohash presence.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     let cancelled = false;
     getDocs(query(collection(firebase().db, 'fractures'), limit(50)))
-      .then((s) => !cancelled && setDbTotal(s.size))
+      .then((s) => {
+        if (cancelled) return;
+        setDbTotal(s.size);
+        const d0 = s.docs[0]?.data() as { geo?: { lat?: number; lng?: number; geohash?: unknown } } | undefined;
+        setProbe0(
+          d0?.geo
+            ? {
+                lat: Number(d0.geo.lat),
+                lng: Number(d0.geo.lng),
+                hasGeohash: typeof d0.geo.geohash === 'string' && d0.geo.geohash.length > 0,
+              }
+            : null,
+        );
+      })
       .catch(() => !cancelled && setDbTotal(-1));
     return () => {
       cancelled = true;
@@ -159,8 +176,9 @@ export function useFractures(player: LatLng): {
       rawCount: raw.length,
       nearestM: raw.length ? Math.round(nearest) : null,
       dbTotal,
+      probe0,
     };
-  }, [raw, player, dbTotal]);
+  }, [raw, player, dbTotal, probe0]);
 
   return { visible, loading, error, usingSample, reload, debug };
 }

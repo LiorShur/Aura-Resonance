@@ -109,6 +109,11 @@ export function MapScreen() {
           <br />
           nearest {debug.nearestM === null ? '—' : `${debug.nearestM} m`} · you{' '}
           {player.lat.toFixed(4)},{player.lng.toFixed(4)}
+          <br />
+          doc0{' '}
+          {debug.probe0
+            ? `${debug.probe0.lat.toFixed(4)},${debug.probe0.lng.toFixed(4)} gh:${debug.probe0.hasGeohash ? 'Y' : 'N'}`
+            : '—'}
         </div>
       )}
 
