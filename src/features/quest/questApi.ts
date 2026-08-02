@@ -46,12 +46,20 @@ export async function callCheckIn(attemptId: string, position: LatLng): Promise<
   return (await fn({ attemptId, position })).data;
 }
 
-export async function callVerify(attemptId: string): Promise<VerifyResult> {
-  const fn = httpsCallable<{ attemptId: string }, VerifyResult>(
+export interface VerifyOptions {
+  breathingCyclesCompleted?: number;
+  breathingSkipped?: boolean;
+}
+
+export async function callVerify(
+  attemptId: string,
+  opts: VerifyOptions = {},
+): Promise<VerifyResult> {
+  const fn = httpsCallable<{ attemptId: string } & VerifyOptions, VerifyResult>(
     firebase().functions,
     'submitVerification',
   );
-  return (await fn({ attemptId })).data;
+  return (await fn({ attemptId, ...opts })).data;
 }
 
 /**

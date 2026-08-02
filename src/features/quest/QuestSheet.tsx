@@ -6,18 +6,21 @@ import { env } from '@/lib/env';
 import { FRACTURE_STYLE, type Fracture } from '@/features/map/types';
 import { useTemplate } from './templates';
 import { downscaleImage, makeSimPhoto } from './photo';
+import { BreatheScreen } from '@/features/breathe/BreatheScreen';
 import {
   callCheckIn,
   callVerify,
   createAttempt,
   uploadQuestPhoto,
   watchAttempt,
+  type VerifyOptions,
 } from './questApi';
 
 type Step =
   | 'intro'
   | 'checking'
   | 'checked_in'
+  | 'breathing'
   | 'uploading'
   | 'pending'
   | 'verifying'
@@ -25,9 +28,8 @@ type Step =
   | 'blocked'
   | 'review';
 
-// Only the not-yet-built verification types still complete directly.
+// Session-code (co-op) still completes directly until M8.
 const DIRECT_HINT: Record<string, string> = {
-  breathing: 'The breathing puzzle arrives in M6 — completing directly for now.',
   session_code: 'Co-op sessions arrive in M8 — completing directly for now.',
 };
 
@@ -45,6 +47,7 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
   const template = useTemplate(fracture.templateId, fracture.type);
   const style = FRACTURE_STYLE[fracture.type];
   const isPhoto = template.verification === 'photo';
+  const isBreathing = template.verification === 'breathing';
 
   const [step, setStep] = useState<Step>('intro');
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -108,19 +111,20 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
     }
   };
 
-  // Non-photo (breathing/session_code): trusted direct completion until M6/M8.
-  const complete = async () => {
+  // Non-photo completion (breathing self-reports cycles; session_code is trusted
+  // until M8). On failure, return to wherever the player was so they can retry.
+  const runVerify = async (opts: VerifyOptions = {}, backTo: Step = 'checked_in') => {
     if (!attemptId) return;
     setStep('verifying');
     setError(null);
     try {
-      const r = await callVerify(attemptId);
+      const r = await callVerify(attemptId, opts);
       setDone({ awarded: r.awarded, capped: r.capped });
       setStep('done');
       onHealed();
     } catch (e) {
       setError(errorMessage(e));
-      setStep('checked_in');
+      setStep(backTo);
     }
   };
 
@@ -232,12 +236,26 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
                   </button>
                 )}
               </>
+            ) : isBreathing ? (
+              <>
+                <p className="mb-3 text-xs text-slate-500">
+                  This Fracture is unstable. Breathe with the pacer to stabilise it — the
+                  pieces settle as you complete each cycle.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStep('breathing')}
+                  className="w-full rounded-xl border border-aura-cyan/40 bg-aura-cyan/10 px-4 py-3 text-sm font-medium text-aura-cyan transition hover:bg-aura-cyan/20"
+                >
+                  Begin breathing
+                </button>
+              </>
             ) : (
               <>
                 <p className="mb-3 text-xs text-slate-500">{DIRECT_HINT[template.verification]}</p>
                 <button
                   type="button"
-                  onClick={() => void complete()}
+                  onClick={() => void runVerify()}
                   className="w-full rounded-xl border border-aura-green/40 bg-aura-green/10 px-4 py-3 text-sm font-medium text-aura-green transition hover:bg-aura-green/20"
                 >
                   Complete quest
@@ -245,6 +263,19 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
               </>
             )}
           </>
+        )}
+
+        {step === 'breathing' && (
+          <BreatheScreen
+            busy={false}
+            onComplete={(cycles) => void runVerify({ breathingCyclesCompleted: cycles }, 'breathing')}
+            onSkip={() =>
+              void runVerify(
+                { breathingCyclesCompleted: 0, breathingSkipped: true },
+                'breathing',
+              )
+            }
+          />
         )}
 
         {(step === 'uploading' || step === 'verifying') && (
