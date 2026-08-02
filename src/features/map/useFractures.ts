@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   collection,
   endAt,
@@ -74,7 +74,6 @@ export function useFractures(player: LatLng): {
   const [reloadToken, setReloadToken] = useState(0);
   const [dbTotal, setDbTotal] = useState<number | null>(null);
   const [probe0, setProbe0] = useState<FractureDebug['probe0']>(null);
-  const lastBoundsKey = useRef<string>('');
 
   // Dev-only: does the client see ANY fractures, ignoring geohash + distance?
   // Also inspect the first doc so we can see its coords + geohash presence.
@@ -102,12 +101,18 @@ export function useFractures(player: LatLng): {
     };
   }, [reloadToken]);
 
+  // Refetch only when the player crosses into a new set of geohash cells. Keying
+  // the effect on this string (not a mutable ref) is what makes it correct under
+  // React 18 StrictMode's double-invoke — a ref guard set on the first pass makes
+  // the second pass early-return while the first was already cancelled, wedging
+  // `loading` forever until the pin moves.
+  const boundsKey = useMemo(
+    () => geohashBounds(player, FETCH_RADIUS_M).map((b) => b.join(':')).join('|'),
+    [player],
+  );
+
   useEffect(() => {
     const bounds = geohashBounds(player, FETCH_RADIUS_M);
-    const key = bounds.map((b) => b.join(':')).join('|');
-    if (key === lastBoundsKey.current) return; // still inside the fetched cells
-    lastBoundsKey.current = key;
-
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -154,7 +159,10 @@ export function useFractures(player: LatLng): {
     return () => {
       cancelled = true;
     };
-  }, [player, reloadToken]);
+    // `player` is intentionally omitted: boundsKey captures the only change that
+    // should trigger a refetch (crossing geohash cells), and it derives from player.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundsKey, reloadToken]);
 
   // Sim-only: ignore night suppression at a desk (see simStore.ignoreNight).
   const ignoreNight = useSimStore((s) => env.simMode && s.ignoreNight);
@@ -164,10 +172,7 @@ export function useFractures(player: LatLng): {
   );
 
   // Force a refetch even without moving (e.g. after a Fracture heals).
-  const reload = () => {
-    lastBoundsKey.current = '';
-    setReloadToken((t) => t + 1);
-  };
+  const reload = () => setReloadToken((t) => t + 1);
 
   const debug = useMemo<FractureDebug>(() => {
     let nearest = Infinity;
