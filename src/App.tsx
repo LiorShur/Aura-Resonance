@@ -7,6 +7,7 @@ import { MapScreen } from './features/map/MapScreen';
 import { ProfileScreen } from './features/profile/ProfileScreen';
 import { ModerationQueueScreen } from './features/moderation/ModerationQueueScreen';
 import { PlaceholderScreen } from './components/PlaceholderScreen';
+import { DebugBadge } from './components/DebugBadge';
 
 /**
  * v0 app shell: sign-in / onboarding gate wraps a full-bleed screen area with a
@@ -22,6 +23,7 @@ export function App() {
         {/* Unlisted protected route (SAFETY §4). isAdmin() rule is the real gate. */}
         {route === 'moderation' ? <ModerationQueueScreen /> : <Shell />}
       </AuthGate>
+      {import.meta.env.DEV && <DebugBadge />}
     </div>
   );
 }
