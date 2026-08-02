@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
 import { env } from '@/lib/env';
-import { geohashBounds, type LatLng } from '@/lib/geo';
+import { distanceM, geohashBounds, type LatLng } from '@/lib/geo';
 import { errorMessage } from '@/lib/errors';
 import { useSimStore } from '@/sim/simStore';
 import { selectVisibleFractures, type RankedFracture } from './selectFractures';
@@ -43,12 +43,19 @@ function toFracture(id: string, data: Record<string, unknown>): Fracture | null 
  * the pin moves. In sim mode with an empty database it falls back to the bundled
  * sample so desk development never faces a blank map.
  */
+export interface FractureDebug {
+  rawCount: number;
+  /** Distance to the nearest fetched Fracture (m), or null when none fetched. */
+  nearestM: number | null;
+}
+
 export function useFractures(player: LatLng): {
   visible: RankedFracture[];
   loading: boolean;
   error: string | null;
   usingSample: boolean;
   reload: () => void;
+  debug: FractureDebug;
 } {
   const [raw, setRaw] = useState<Fracture[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,5 +131,11 @@ export function useFractures(player: LatLng): {
     setReloadToken((t) => t + 1);
   };
 
-  return { visible, loading, error, usingSample, reload };
+  const debug = useMemo<FractureDebug>(() => {
+    let nearest = Infinity;
+    for (const f of raw) nearest = Math.min(nearest, distanceM(player, f.geo));
+    return { rawCount: raw.length, nearestM: raw.length ? Math.round(nearest) : null };
+  }, [raw, player]);
+
+  return { visible, loading, error, usingSample, reload, debug };
 }
