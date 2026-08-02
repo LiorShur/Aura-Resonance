@@ -4,18 +4,23 @@ import { errorMessage } from '@/lib/errors';
 import {
   completeEmailLink,
   isEmailLink,
-  sendEmailLink,
   signInWithGoogle,
+  signInWithPassword,
+  signUpWithPassword,
 } from '@/lib/auth';
 
+type Mode = 'signin' | 'signup';
+
 /**
- * Sign-in: Google popup or passwordless email link. On return via an email link
- * we complete the flow automatically. Against the Auth emulator the "sent" link
- * is printed to the emulator logs rather than emailed — the hint says so in sim.
+ * Sign-in: Google popup or email + password. Creating an account drops straight
+ * into onboarding (age gate + profile). Email/password is the simplest way to run
+ * two accounts side by side against the emulator. A returning email-link URL (the
+ * older flow) is still completed automatically if present.
  */
 export function SignInScreen() {
+  const [mode, setMode] = useState<Mode>('signup');
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +40,15 @@ export function SignInScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void withBusy(() =>
+      mode === 'signup'
+        ? signUpWithPassword(email.trim(), password)
+        : signInWithPassword(email.trim(), password),
+    );
   };
 
   return (
@@ -61,42 +75,53 @@ export function SignInScreen() {
           <span className="h-px flex-1 bg-white/10" /> or <span className="h-px flex-1 bg-white/10" />
         </div>
 
-        {sent ? (
-          <p className="text-center text-sm text-slate-300">
-            Check your email for a sign-in link.
-            {env.simMode && (
-              <span className="mt-1 block text-xs text-amber-300/80">
-                Sim mode: the link is printed in the Auth emulator logs (terminal / localhost:4000).
-              </span>
-            )}
-          </p>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void withBusy(async () => {
-                await sendEmailLink(email);
-                setSent(true);
-              });
-            }}
-            className="space-y-3"
+        <form onSubmit={submit} className="space-y-3">
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-aura-cyan/50"
+          />
+          <input
+            type="password"
+            required
+            minLength={6}
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password (min 6 characters)"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-aura-cyan/50"
+          />
+          <button
+            type="submit"
+            disabled={busy || !email || password.length < 6}
+            className="w-full rounded-xl border border-aura-cyan/40 bg-aura-cyan/10 px-4 py-3 text-sm font-medium text-aura-cyan transition hover:bg-aura-cyan/20 disabled:opacity-50"
           >
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-aura-cyan/50"
-            />
-            <button
-              type="submit"
-              disabled={busy || !email}
-              className="w-full rounded-xl border border-aura-cyan/40 bg-aura-cyan/10 px-4 py-3 text-sm font-medium text-aura-cyan transition hover:bg-aura-cyan/20 disabled:opacity-50"
-            >
-              Email me a sign-in link
-            </button>
-          </form>
+            {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
+            setError(null);
+          }}
+          className="w-full text-center text-xs text-slate-400 hover:text-slate-200"
+        >
+          {mode === 'signup'
+            ? 'Already have an account? Sign in'
+            : 'New here? Create an account'}
+        </button>
+
+        {env.simMode && (
+          <p className="text-center text-[11px] text-amber-300/80">
+            Sim mode: accounts live in the local Auth emulator. Use any email (e.g.
+            a@test.com) — no real inbox needed.
+          </p>
         )}
 
         {error && <p className="text-center text-sm text-rose-300">{error}</p>}

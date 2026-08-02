@@ -1,8 +1,10 @@
 import {
+  createUserWithEmailAndPassword,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendSignInLinkToEmail,
+  signInWithEmailAndPassword,
   signInWithEmailLink,
   signInWithPopup,
   signOut as fbSignOut,
@@ -22,6 +24,16 @@ export async function signInWithGoogle(): Promise<void> {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   await signInWithPopup(firebase().auth, provider);
+}
+
+/** Create an email/password account. New accounts land in onboarding next. */
+export async function signUpWithPassword(email: string, password: string): Promise<void> {
+  await createUserWithEmailAndPassword(firebase().auth, email, password);
+}
+
+/** Sign in to an existing email/password account. */
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  await signInWithEmailAndPassword(firebase().auth, email, password);
 }
 
 /**
