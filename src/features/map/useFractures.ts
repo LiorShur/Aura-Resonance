@@ -3,14 +3,13 @@ import {
   collection,
   endAt,
   getDocs,
-  limit,
   orderBy,
   query,
   startAt,
 } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
 import { env } from '@/lib/env';
-import { distanceM, geohashBounds, type LatLng } from '@/lib/geo';
+import { geohashBounds, type LatLng } from '@/lib/geo';
 import { errorMessage } from '@/lib/errors';
 import { useSimStore } from '@/sim/simStore';
 import { selectVisibleFractures, type RankedFracture } from './selectFractures';
@@ -44,62 +43,18 @@ function toFracture(id: string, data: Record<string, unknown>): Fracture | null 
  * the pin moves. In sim mode with an empty database it falls back to the bundled
  * sample so desk development never faces a blank map.
  */
-export interface FractureDebug {
-  rawCount: number;
-  /** Distance to the nearest fetched Fracture (m), or null when none fetched. */
-  nearestM: number | null;
-  /**
-   * Dev probe: unfiltered count of the whole `fractures` collection as the
-   * client sees it (bypasses geohash + distance). null = still loading,
-   * -1 = read error/denied. Distinguishes "app can't see the data at all" from
-   * "data is there but filtered out by location".
-   */
-  dbTotal: number | null;
-  /** Dev probe: first doc's coords + whether it carries a geohash field. */
-  probe0: { lat: number; lng: number; hasGeohash: boolean } | null;
-}
-
 export function useFractures(player: LatLng): {
   visible: RankedFracture[];
   loading: boolean;
   error: string | null;
   usingSample: boolean;
   reload: () => void;
-  debug: FractureDebug;
 } {
   const [raw, setRaw] = useState<Fracture[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingSample, setUsingSample] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
-  const [dbTotal, setDbTotal] = useState<number | null>(null);
-  const [probe0, setProbe0] = useState<FractureDebug['probe0']>(null);
-
-  // Dev-only: does the client see ANY fractures, ignoring geohash + distance?
-  // Also inspect the first doc so we can see its coords + geohash presence.
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    let cancelled = false;
-    getDocs(query(collection(firebase().db, 'fractures'), limit(50)))
-      .then((s) => {
-        if (cancelled) return;
-        setDbTotal(s.size);
-        const d0 = s.docs[0]?.data() as { geo?: { lat?: number; lng?: number; geohash?: unknown } } | undefined;
-        setProbe0(
-          d0?.geo
-            ? {
-                lat: Number(d0.geo.lat),
-                lng: Number(d0.geo.lng),
-                hasGeohash: typeof d0.geo.geohash === 'string' && d0.geo.geohash.length > 0,
-              }
-            : null,
-        );
-      })
-      .catch(() => !cancelled && setDbTotal(-1));
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadToken]);
 
   // Refetch only when the player crosses into a new set of geohash cells. Keying
   // the effect on this string (not a mutable ref) is what makes it correct under
@@ -174,16 +129,5 @@ export function useFractures(player: LatLng): {
   // Force a refetch even without moving (e.g. after a Fracture heals).
   const reload = () => setReloadToken((t) => t + 1);
 
-  const debug = useMemo<FractureDebug>(() => {
-    let nearest = Infinity;
-    for (const f of raw) nearest = Math.min(nearest, distanceM(player, f.geo));
-    return {
-      rawCount: raw.length,
-      nearestM: raw.length ? Math.round(nearest) : null,
-      dbTotal,
-      probe0,
-    };
-  }, [raw, player, dbTotal, probe0]);
-
-  return { visible, loading, error, usingSample, reload, debug };
+  return { visible, loading, error, usingSample, reload };
 }

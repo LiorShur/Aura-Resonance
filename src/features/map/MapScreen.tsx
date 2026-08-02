@@ -26,7 +26,7 @@ export function MapScreen() {
   const profile = useAuthStore((s) => s.profile);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { visible, loading, usingSample, reload, error, debug } = useFractures(player);
+  const { visible, loading, usingSample, reload } = useFractures(player);
 
   // Live mode: seed the initial position once (foreground, on demand only).
   useEffect(() => {
@@ -96,24 +96,6 @@ export function MapScreen() {
       {loading && (
         <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 text-xs text-slate-500">
           finding Fractures…
-        </div>
-      )}
-
-      {import.meta.env.DEV && (
-        <div className="pointer-events-none absolute bottom-24 left-1 z-20 rounded bg-black/75 px-2 py-1 font-mono text-[10px] leading-tight text-cyan-300">
-          db {debug.dbTotal === null ? '…' : debug.dbTotal} · fetched {debug.rawCount} · visible{' '}
-          {visible.length}
-          {usingSample ? ' · SAMPLE' : ''}
-          {loading ? ' · loading' : ''}
-          {error ? ' · ERR' : ''}
-          <br />
-          nearest {debug.nearestM === null ? '—' : `${debug.nearestM} m`} · you{' '}
-          {player.lat.toFixed(4)},{player.lng.toFixed(4)}
-          <br />
-          doc0{' '}
-          {debug.probe0
-            ? `${debug.probe0.lat.toFixed(4)},${debug.probe0.lng.toFixed(4)} gh:${debug.probe0.hasGeohash ? 'Y' : 'N'}`
-            : '—'}
         </div>
       )}
 
