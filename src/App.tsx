@@ -5,6 +5,7 @@ import { SimBanner } from './sim/SimBanner';
 import { AuthGate } from './features/auth/AuthGate';
 import { MapScreen } from './features/map/MapScreen';
 import { ProfileScreen } from './features/profile/ProfileScreen';
+import { EmpathyScreen } from './features/empathy/EmpathyScreen';
 import { ModerationQueueScreen } from './features/moderation/ModerationQueueScreen';
 import { PlaceholderScreen } from './components/PlaceholderScreen';
 
@@ -45,7 +46,7 @@ function Shell() {
       <main className="relative min-h-0 flex-1">
         {tab === 'map' && <MapScreen />}
         {tab === 'auras' && <PlaceholderScreen title="Auras" milestone="M9" />}
-        {tab === 'resonate' && <PlaceholderScreen title="Resonate" milestone="M3" />}
+        {tab === 'resonate' && <EmpathyScreen />}
         {tab === 'inventory' && <PlaceholderScreen title="Inventory" milestone="M9" />}
         {tab === 'profile' && <ProfileScreen />}
       </main>
