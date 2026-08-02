@@ -204,6 +204,39 @@ describe('empathySubmissions — invisible until screened', () => {
   });
 });
 
+describe('empathyAdvice — visible only once moderation passes', () => {
+  const advice = (mod: string) => ({
+    submissionId: 's1',
+    authorUid: BOB,
+    text: 'You are not alone in this.',
+    moderation: { status: mod, labels: [] },
+    rating: null,
+    ratedAt: null,
+    createdAt: new Date(),
+  });
+
+  it('unmoderated (pending) advice is unreadable', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'empathyAdvice', 'a1'), advice('pending'));
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(getDoc(doc(db, 'empathyAdvice', 'a1')));
+  });
+
+  it('moderation-passed advice is readable', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'empathyAdvice', 'a2'), advice('pass'));
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(getDoc(doc(db, 'empathyAdvice', 'a2')));
+  });
+
+  it('a client cannot write advice directly (functions only)', async () => {
+    const db = testEnv.authenticatedContext(BOB).firestore();
+    await assertFails(setDoc(doc(db, 'empathyAdvice', 'a3'), advice('pass')));
+  });
+});
+
 describe('echoes — visible only when passed and not hidden', () => {
   const echo = (mod: string, hidden: boolean) => ({
     authorUid: ALICE,
