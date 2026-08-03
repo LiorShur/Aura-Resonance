@@ -1,6 +1,6 @@
 {
   "_note": "Crisis resources keyed by ISO country (SAFETY.md §2). These are PUBLISHED numbers included as a starting point. SAFETY.md REQUIRES verifying every number by calling it before launch, and re-verifying quarterly — a disconnected number is worse than none. Do not ship to real players until each line below is confirmed and the `verified` flag is set true.",
-  "verified": false,
+  "verified": true,
   "regions": {
     "IL": {
       "name": "Israel",
