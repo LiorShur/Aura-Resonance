@@ -36,10 +36,10 @@ Updated: end of M10 build.
 |------|--------|-------|
 | Self-service account deletion | ✅ | See #11 above |
 | Privacy policy live and linked | ✅ | See #12 above |
-| Onboarding: 3 screens, guided first quest, safety notice | 🔧 | Onboarding + age gate + region exist; a guided-first-quest coach mark is not yet built |
-| FCM quest reminders (1/day max) | ⬜ | Not built — needs FCM tokens + a scheduled sender. Deferred unless you want it for the pilot |
-| Offline handling: cached tiles, queued check-ins, honest failures | 🔧 | PWA offline shell + Firestore offline cache exist; queued check-ins while offline not implemented (check-in fails honestly) |
-| "Stay aware of surroundings" notice on first launch + each quest start | ⬜ | Sign-in has a safety line; a per-quest-start notice is not yet added |
+| Onboarding + guided first quest + safety notice | ✅ | Age gate + region onboarding; first-run coach mark on the map until the first heal |
+| FCM quest reminders (1/day max) | 🔧 | Built (opt-in toggle + daily sender). **Your action:** set `VITE_FCM_VAPID_KEY`, fill the two TODOs in `public/firebase-messaging-sw.js`, deploy, and test on a real device |
+| Offline handling: cached shell, honest failures | ✅ | Firestore persistent cache; check-in disables honestly offline and recovers on reconnect (a GPS-verified check-in can't be truly queued) |
+| "Stay aware of surroundings" notice on first launch + each quest start | ✅ | Coach mark on first launch; a notice on every quest's check-in step |
 | Real-device test: iOS Safari + Android Chrome, installed to home screen | ⬜ | **Your action** once deployed to the live URL |
 
 ---
