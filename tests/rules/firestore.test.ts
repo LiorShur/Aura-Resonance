@@ -424,3 +424,21 @@ describe('coopSessions — participants only, puzzleState-only writes', () => {
     await assertFails(updateDoc(doc(db, 'coopSessions', 'c1'), { state: 'complete' }));
   });
 });
+
+describe('metrics — admin-only dashboard aggregates', () => {
+  it('a normal player cannot read metrics', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'metrics', 'summary'), { players: 3, secondDayPct: 33 });
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(getDoc(doc(db, 'metrics', 'summary')));
+  });
+
+  it('an admin can read metrics', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'metrics', 'summary'), { players: 3, secondDayPct: 33 });
+    });
+    const db = testEnv.authenticatedContext('mod', { admin: true }).firestore();
+    await assertSucceeds(getDoc(doc(db, 'metrics', 'summary')));
+  });
+});

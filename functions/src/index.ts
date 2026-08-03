@@ -30,6 +30,13 @@ export { submitDilemma, submitAdvice, rateAdvice } from './empathy.js';
 export { createEcho } from './echoes.js';
 export { openCoopSession, joinCoopSession, completeCoopSession } from './coop.js';
 export {
+  respawnFractures,
+  recomputeMapBrightness,
+  truncateOldLocations,
+  dailyMetrics,
+  adminRun,
+} from './scheduled.js';
+export {
   screenDilemma,
   moderateEcho,
   moderateAdvice,

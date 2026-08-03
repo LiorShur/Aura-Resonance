@@ -117,10 +117,17 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Thin, append-only analytics. Client may write, never read.
+    // Thin, append-only analytics. Client may write, never read (the metrics
+    // function reads these via the Admin SDK and writes metrics/summary).
     match /analytics_events/{id} {
       allow create: if signedIn();
       allow read, update, delete: if false;
+    }
+
+    // Computed dashboard aggregates — admin-readable, function-written.
+    match /metrics/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }
