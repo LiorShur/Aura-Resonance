@@ -63,9 +63,10 @@ export function Inbox() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        <h2 className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
           Advice you've given
         </h2>
+        <AcceptanceSummary advice={given} />
         {!given ? (
           <p className="text-sm text-slate-500">Loading…</p>
         ) : given.length === 0 ? (
@@ -81,6 +82,19 @@ export function Inbox() {
         )}
       </section>
     </div>
+  );
+}
+
+/** Adviser reputation: how much of your rated advice landed as genuinely helpful. */
+function AcceptanceSummary({ advice }: { advice: Advice[] | null }) {
+  if (!advice) return null;
+  const rated = advice.filter((a) => a.rating != null);
+  if (rated.length === 0) return null;
+  const strong = rated.filter((a) => (a.rating ?? 0) >= 4).length;
+  return (
+    <p className="mb-2 text-[11px] text-slate-500">
+      {strong} of {rated.length} rated ★4+ · thank you for showing up for people
+    </p>
   );
 }
 

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { errorMessage } from '@/lib/errors';
 import { Avatar } from '@/components/Avatar';
 import { newAvatarSeed } from '@/lib/avatar';
 import { useAuthStore } from '@/features/auth/authStore';
 import { REGIONS } from '@/features/onboarding/regions';
+import { reasonLabel, watchLedger, type LedgerEntry } from './ledger';
 
 /**
  * Profile: the player edits only vanity fields (display name, avatar). Aura Level
@@ -97,14 +98,49 @@ export function ProfileScreen() {
         {busy ? 'Saving…' : 'Save changes'}
       </button>
 
+      <RecentActivity uid={profile.uid} />
+
       <button
         type="button"
         onClick={() => void signOut()}
-        className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 hover:bg-white/10"
+        className="mt-6 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 hover:bg-white/10"
       >
         Sign out
       </button>
     </div>
+  );
+}
+
+function RecentActivity({ uid }: { uid: string }) {
+  const [entries, setEntries] = useState<LedgerEntry[] | null>(null);
+
+  useEffect(() => watchLedger(uid, setEntries), [uid]);
+
+  if (!entries || entries.length === 0) return null;
+
+  return (
+    <section className="mt-6">
+      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        Recent activity
+      </h2>
+      <ul className="divide-y divide-white/5 overflow-hidden rounded-2xl bg-white/5">
+        {entries.map((e) => (
+          <li key={e.id} className="flex items-center justify-between px-4 py-2.5">
+            <span className="text-sm text-slate-300">{reasonLabel(e.reason)}</span>
+            <span className="flex items-baseline gap-2">
+              <span
+                className={`text-sm font-semibold ${e.delta > 0 ? 'text-aura-green' : 'text-slate-400'}`}
+              >
+                {e.delta > 0 ? `+${e.delta}` : e.delta} RP
+              </span>
+              <span className="text-[11px] tabular-nums text-slate-600">
+                {e.createdAt ? e.createdAt.toDate().toLocaleDateString() : ''}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
