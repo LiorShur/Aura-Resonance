@@ -17,6 +17,8 @@ export interface UserProfile {
   homeRegion: string;
   strikes: number;
   suspendedUntil: Timestamp | null;
+  /** Opted in to daily quest reminders (FCM). */
+  notifOptIn?: boolean;
   createdAt: Timestamp | null;
   lastActiveAt: Timestamp | null;
   stats: {

@@ -8,6 +8,7 @@ import {
   returnedOnMultipleDays,
   secondDayCompleters,
 } from './metrics-core.js';
+import { sendRemindersCore } from './push.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RESPAWN_COOLDOWN_MS = 6 * 60 * 60 * 1000; // healed Fractures reactivate after 6h
@@ -175,6 +176,8 @@ export const adminRun = onCall(async (request) => {
       return { task, truncated: await truncateLocationsCore(db) };
     case 'metrics':
       return { task, summary: await computeMetricsCore(db) };
+    case 'reminders':
+      return { task, sent: await sendRemindersCore(db) };
     default:
       throw new HttpsError('invalid-argument', 'unknown-task');
   }

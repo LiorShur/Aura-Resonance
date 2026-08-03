@@ -4,6 +4,7 @@ import { Avatar } from '@/components/Avatar';
 import { newAvatarSeed } from '@/lib/avatar';
 import { useAuthStore } from '@/features/auth/authStore';
 import { REGIONS } from '@/features/onboarding/regions';
+import { disableReminders, enableReminders } from '@/lib/notifications';
 import { reasonLabel, watchLedger, type LedgerEntry } from './ledger';
 
 /**
@@ -109,6 +110,8 @@ export function ProfileScreen() {
         Sign out
       </button>
 
+      <RemindersToggle optedIn={Boolean(profile.notifOptIn)} />
+
       <a
         href="#/privacy"
         className="mt-4 block text-center text-xs text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
@@ -117,6 +120,56 @@ export function ProfileScreen() {
       </a>
 
       <DangerZone onDelete={deleteAccount} />
+    </div>
+  );
+}
+
+function RemindersToggle({ optedIn }: { optedIn: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  const toggle = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      if (optedIn) {
+        await disableReminders();
+        setNote('Reminders off.');
+      } else {
+        const r = await enableReminders();
+        setNote(
+          r === 'enabled'
+            ? 'Reminders on — at most one a day.'
+            : r === 'denied'
+              ? 'Notifications are blocked in your browser settings.'
+              : 'Reminders aren’t available on this device yet.',
+        );
+      }
+    } catch (e) {
+      setNote(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div>
+        <p className="text-sm text-slate-200">Quest reminders</p>
+        <p className="text-[11px] text-slate-500">{note ?? 'A gentle nudge, at most once a day.'}</p>
+      </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void toggle()}
+        className={`rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
+          optedIn
+            ? 'border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+            : 'border border-aura-cyan/40 bg-aura-cyan/10 text-aura-cyan hover:bg-aura-cyan/20'
+        }`}
+      >
+        {busy ? '…' : optedIn ? 'Turn off' : 'Turn on'}
+      </button>
     </div>
   );
 }
