@@ -8,6 +8,7 @@ import { ProfileScreen } from './features/profile/ProfileScreen';
 import { EmpathyScreen } from './features/empathy/EmpathyScreen';
 import { ModerationQueueScreen } from './features/moderation/ModerationQueueScreen';
 import { MetricsScreen } from './features/metrics/MetricsScreen';
+import { PrivacyScreen } from './features/legal/PrivacyScreen';
 import { PlaceholderScreen } from './components/PlaceholderScreen';
 import { logEvent } from './lib/analytics';
 
@@ -18,6 +19,16 @@ import { logEvent } from './lib/analytics';
  */
 export function App() {
   const route = useHashRoute();
+
+  // The privacy policy is public — reachable before sign-in, outside the gate.
+  if (route === 'privacy') {
+    return (
+      <div className="relative flex h-full flex-col overflow-hidden bg-base-900">
+        <PrivacyScreen />
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-base-900">
       {env.simMode && <SimBanner />}
@@ -35,13 +46,13 @@ export function App() {
   );
 }
 
-type Route = 'moderation' | 'metrics' | 'app';
+type Route = 'moderation' | 'metrics' | 'privacy' | 'app';
 
-/** Minimal hash routing: the unlisted admin review/dashboard routes. */
+/** Minimal hash routing: public privacy page + unlisted admin routes. */
 function useHashRoute(): Route {
   const read = (): Route => {
     const h = window.location.hash.replace(/^#\/?/, '');
-    return h === 'moderation' || h === 'metrics' ? h : 'app';
+    return h === 'moderation' || h === 'metrics' || h === 'privacy' ? h : 'app';
   };
   const [route, setRoute] = useState<Route>(read);
   useEffect(() => {

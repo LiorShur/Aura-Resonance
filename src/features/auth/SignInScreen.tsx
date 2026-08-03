@@ -129,7 +129,11 @@ export function SignInScreen() {
 
       <p className="max-w-xs text-center text-xs text-slate-500">
         You must be 16 or older. By continuing you agree to our community
-        guidelines and privacy policy.
+        guidelines and{' '}
+        <a href="#/privacy" className="text-aura-cyan underline-offset-2 hover:underline">
+          privacy policy
+        </a>
+        .
       </p>
     </div>
   );

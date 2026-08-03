@@ -109,6 +109,13 @@ export function ProfileScreen() {
         Sign out
       </button>
 
+      <a
+        href="#/privacy"
+        className="mt-4 block text-center text-xs text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+      >
+        Privacy policy
+      </a>
+
       <DangerZone onDelete={deleteAccount} />
     </div>
   );
