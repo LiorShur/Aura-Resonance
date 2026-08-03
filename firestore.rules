@@ -87,11 +87,27 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Media, co-op sessions, reports, queue: function-mediated. Co-op puzzle
-    // state becomes client-writable to participants in M8; denied here for now.
+    // Media + queue: function-mediated.
     match /media/{id}          { allow read: if signedIn(); allow write: if false; }
-    match /coopSessions/{id}   { allow read: if signedIn(); allow write: if false; }
     match /moderationQueue/{id}{ allow read: if isAdmin(); allow write: if false; }
+
+    // Co-op: readable by its two participants. Sessions are created/advanced by
+    // functions (open/join/complete); the ONLY client write is the shared
+    // puzzleState, and only once the session is verified — so a client can never
+    // flip a session to complete or award itself points.
+    match /coopSessions/{id} {
+      function participant() {
+        return signedIn() && (
+          resource.data.hostUid == request.auth.uid ||
+          resource.data.guestUid == request.auth.uid
+        );
+      }
+      allow read: if participant();
+      allow update: if participant()
+        && resource.data.state in ['verified', 'solving']
+        && onlyChanging(['puzzleState']);
+      allow create, delete: if false;
+    }
 
     // Reports: a signed-in player may file one; the counter/auto-hide is done by
     // the onReport function.
