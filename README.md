@@ -74,6 +74,17 @@ Tap **✧ Echoes** on the map to leave a 140-char note anchored to your position
 or read Echoes left within 50m. Each is moderated before it becomes visible
 (keyless in the emulator via the moderation seam).
 
+### Metrics dashboard (M9)
+
+The GDD §6 metrics are readable in-app without opening the Firestore console.
+Grant yourself the admin claim (`scripts/grant-admin.ts`), then visit
+`#metrics` — e.g. `http://localhost:5173/#metrics`. It shows second-day quest
+completion (the primary metric), the quest funnel, return rate, empathy loop
+close rate, and moderation load. The scheduled jobs (respawn, brightness,
+truncate, metrics) run on a cron in production; the dashboard's buttons trigger
+them on demand so they're testable in the emulator. Hit **Recompute metrics**
+after playing to refresh the numbers.
+
 ## Scripts
 
 | Command | What it does |
