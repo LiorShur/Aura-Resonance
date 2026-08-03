@@ -32,6 +32,8 @@ interface AuthState {
   createProfile: (input: CreateProfileInput) => Promise<void>;
   /** The only client-writable profile fields (SCHEMA: displayName, avatarSeed). */
   updateVanity: (patch: { displayName?: string; avatarSeed?: string }) => Promise<void>;
+  /** Self-service account deletion (SAFETY §6): purges all data, then signs out. */
+  deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -96,6 +98,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       ...patch,
       lastActiveAt: serverTimestamp(),
     });
+  },
+
+  deleteAccount: async () => {
+    const fn = httpsCallable<Record<string, never>, { ok: boolean }>(
+      firebase().functions,
+      'deleteAccount',
+    );
+    await fn({});
+    await fbSignOut();
   },
 
   signOut: async () => {

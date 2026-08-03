@@ -15,6 +15,7 @@ export function ProfileScreen() {
   const profile = useAuthStore((s) => s.profile);
   const updateVanity = useAuthStore((s) => s.updateVanity);
   const signOut = useAuthStore((s) => s.signOut);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
 
   const [name, setName] = useState(profile?.displayName ?? '');
   const [seed, setSeed] = useState(profile?.avatarSeed ?? '');
@@ -107,6 +108,62 @@ export function ProfileScreen() {
       >
         Sign out
       </button>
+
+      <DangerZone onDelete={deleteAccount} />
+    </div>
+  );
+}
+
+function DangerZone({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="mt-8 rounded-2xl border border-rose-500/20 p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-rose-300/80">Danger zone</p>
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="mt-2 text-sm text-rose-300 underline-offset-2 hover:underline"
+        >
+          Delete my account
+        </button>
+      ) : (
+        <div className="mt-2">
+          <p className="text-sm text-slate-300">
+            This permanently deletes your account and all your data — quests, advice, Echoes,
+            points, and check-in locations. It can’t be undone.
+          </p>
+          {error && <p className="mt-1 text-xs text-rose-300">{error}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError(null);
+                onDelete().catch((e) => {
+                  setError(errorMessage(e));
+                  setBusy(false);
+                });
+              }}
+              className="flex-1 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-300 hover:bg-rose-500/20 disabled:opacity-50"
+            >
+              {busy ? 'Deleting…' : 'Delete everything'}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirming(false)}
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
