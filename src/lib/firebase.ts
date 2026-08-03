@@ -2,7 +2,9 @@ import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
 import {
   connectFirestoreEmulator,
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   type Firestore,
 } from 'firebase/firestore';
 import {
@@ -58,7 +60,11 @@ export function firebase() {
 
   const app = initializeApp(config);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  // Persistent local cache: the map, profile, and content stay readable offline
+  // (M10 offline handling). Multi-tab manager so two windows share one cache.
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
   const storage = getStorage(app);
   const functions = getFunctions(app);
 

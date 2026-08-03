@@ -30,6 +30,9 @@ export function MapScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [echoesOpen, setEchoesOpen] = useState(false);
   const [brightness, setBrightness] = useState<number | null>(null);
+  const [coachDismissed, setCoachDismissed] = useState(false);
+  // First-run guidance: shown until the player heals their first Fracture.
+  const showCoach = !coachDismissed && (profile?.stats.questsCompleted ?? 0) === 0;
 
   // Neighbourhood brightness — the recomputeMapBrightness aggregate (GDD §4).
   useEffect(
@@ -117,6 +120,29 @@ export function MapScreen() {
       {loading && (
         <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 text-xs text-slate-500">
           finding Fractures…
+        </div>
+      )}
+
+      {/* First-run coaching (SAFETY §5: surroundings notice on first launch) */}
+      {showCoach && !selected && !echoesOpen && (
+        <div className="pointer-events-none absolute inset-x-0 top-20 z-20 flex justify-center px-4">
+          <div className="glass pointer-events-auto max-w-sm rounded-2xl p-4 text-center">
+            <p className="font-display text-lg text-aura-cyan">Welcome, Weaver</p>
+            <p className="mt-1 text-sm text-slate-300">
+              Tap a glowing Fracture on the map to begin. Walk there, tap <b>I’m here</b>, and
+              do one small kindness to heal it.
+            </p>
+            <p className="mt-2 text-xs text-amber-300/90">
+              ⚠ You’ll be out in the real world — stay aware of your surroundings.
+            </p>
+            <button
+              type="button"
+              onClick={() => setCoachDismissed(true)}
+              className="mt-3 rounded-xl border border-aura-cyan/40 bg-aura-cyan/10 px-4 py-2 text-sm font-medium text-aura-cyan hover:bg-aura-cyan/20"
+            >
+              Got it
+            </button>
+          </div>
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { getCurrentPosition } from '@/lib/geolocation';
 import { errorMessage } from '@/lib/errors';
 import { env } from '@/lib/env';
 import { logEvent } from '@/lib/analytics';
+import { useOnline } from '@/lib/useOnline';
 import { FRACTURE_STYLE, type Fracture } from '@/features/map/types';
 import { useTemplate } from './templates';
 import { downscaleImage, makeSimPhoto } from './photo';
@@ -58,6 +59,7 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ awarded: number; capped: boolean } | null>(null);
   const [pendingLong, setPendingLong] = useState(false);
+  const online = useOnline();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Funnel: the player opened this Fracture (GDD §6).
@@ -183,18 +185,33 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
 
         {(step === 'intro' || step === 'checking') && (
           <>
+            <p className="mb-2 text-[11px] text-slate-500">
+              ⚠ Stay aware of your surroundings.
+            </p>
             {remaining !== null && (
               <p className="mb-2 text-xs text-amber-300">
                 You’re still {formatDistance(remaining)} away — move closer and try again.
               </p>
             )}
+            {!online && (
+              <p className="mb-2 text-xs text-amber-300">
+                You’re offline — checking in needs a connection. We’ll enable this the moment
+                you’re back.
+              </p>
+            )}
             <button
               type="button"
-              disabled={step === 'checking'}
+              disabled={step === 'checking' || !online}
               onClick={() => void imHere()}
               className="w-full rounded-xl border border-aura-cyan/40 bg-aura-cyan/10 px-4 py-3 text-sm font-medium text-aura-cyan transition hover:bg-aura-cyan/20 disabled:opacity-50"
             >
-              {step === 'checking' ? 'Checking…' : remaining !== null ? 'Try again' : "I’m here"}
+              {step === 'checking'
+                ? 'Checking…'
+                : !online
+                  ? 'Offline'
+                  : remaining !== null
+                    ? 'Try again'
+                    : "I’m here"}
             </button>
           </>
         )}
