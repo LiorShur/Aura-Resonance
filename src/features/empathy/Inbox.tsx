@@ -5,11 +5,19 @@ import { CATEGORY_LABEL } from './categories';
 import {
   rateAdvice,
   watchAdvice,
+  watchMyAdvice,
   watchMySubmissions,
   type Advice,
   type Submission,
 } from './empathyApi';
 import { ReportButton } from './ReportButton';
+
+const ADVICE_STATUS_LABEL: Record<string, string> = {
+  pass: 'Live',
+  pending: 'Under review',
+  flag: 'Under review',
+  block: 'Removed',
+};
 
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Screening…',
@@ -21,23 +29,76 @@ const STATUS_LABEL: Record<string, string> = {
 export function Inbox() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [subs, setSubs] = useState<Submission[] | null>(null);
+  const [given, setGiven] = useState<Advice[] | null>(null);
 
   useEffect(() => {
     if (!uid) return;
-    return watchMySubmissions(uid, setSubs);
+    const a = watchMySubmissions(uid, setSubs);
+    const b = watchMyAdvice(uid, setGiven);
+    return () => {
+      a();
+      b();
+    };
   }, [uid]);
 
-  if (!subs) return <p className="text-sm text-slate-500">Loading…</p>;
-  if (subs.length === 0) {
-    return <p className="text-sm text-slate-400">Nothing yet. Share something in the Share tab.</p>;
-  }
-
   return (
-    <ul className="space-y-3">
-      {subs.map((s) => (
-        <InboxCard key={s.id} submission={s} />
-      ))}
-    </ul>
+    <div className="space-y-6">
+      <section>
+        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Advice you've received
+        </h2>
+        {!subs ? (
+          <p className="text-sm text-slate-500">Loading…</p>
+        ) : subs.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Nothing yet. Share something in the Share tab.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {subs.map((s) => (
+              <InboxCard key={s.id} submission={s} />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+          Advice you've given
+        </h2>
+        {!given ? (
+          <p className="text-sm text-slate-500">Loading…</p>
+        ) : given.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            None yet. Offer a perspective from the Advise tab.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {given.map((a) => (
+              <GivenRow key={a.id} advice={a} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function GivenRow({ advice }: { advice: Advice }) {
+  return (
+    <li className="rounded-xl bg-white/5 p-3">
+      <p className="whitespace-pre-wrap text-sm text-slate-200">{advice.text}</p>
+      <div className="mt-2 flex items-center justify-between text-[11px]">
+        <span className="text-slate-500">
+          {ADVICE_STATUS_LABEL[advice.moderation.status] ?? advice.moderation.status}
+        </span>
+        <span className="text-slate-400">
+          {advice.rating
+            ? `Rated ${'★'.repeat(advice.rating)}${'☆'.repeat(5 - advice.rating)}`
+            : 'Awaiting rating'}
+        </span>
+      </div>
+    </li>
   );
 }
 

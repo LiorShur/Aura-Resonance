@@ -66,6 +66,7 @@ export function ProfileScreen() {
         <Stat label="Aura Level" value={profile.auraLevel} />
         <Stat label="Resonance Points" value={profile.resonancePoints} />
         <Stat label="Quests healed" value={profile.stats.questsCompleted} />
+        <Stat label="Advice given" value={profile.stats.adviceGiven} />
         <Stat label="Active days" value={profile.stats.distinctActiveDays} />
       </div>
 

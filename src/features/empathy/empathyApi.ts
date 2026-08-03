@@ -172,6 +172,25 @@ export function watchMySubmissions(
   );
 }
 
+/** The signed-in user's own advice (any moderation status), newest first. */
+export function watchMyAdvice(
+  uid: string,
+  cb: (advice: Advice[]) => void,
+  onError?: ErrCb,
+): () => void {
+  const q = query(
+    collection(firebase().db, 'empathyAdvice'),
+    where('authorUid', '==', uid),
+    orderBy('createdAt', 'desc'),
+    limit(50),
+  );
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => toAdvice(d.id, d.data()))),
+    (e) => onError?.(e.message),
+  );
+}
+
 /** Passed advice for a submission (rules only expose moderation-passed advice). */
 export function watchAdvice(
   submissionId: string,

@@ -76,9 +76,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Advice is visible to others once moderation passes; the adviser can always
+    // read their own (to see status + the rating they received), like the
+    // submission author can read their own pending submission.
     match /empathyAdvice/{id} {
-      allow read: if signedIn()
-        && resource.data.moderation.status == 'pass';
+      allow read: if signedIn() && (
+        resource.data.moderation.status == 'pass' ||
+        resource.data.authorUid == request.auth.uid
+      );
       allow write: if false;
     }
 

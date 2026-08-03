@@ -231,6 +231,14 @@ describe('empathyAdvice — visible only once moderation passes', () => {
     await assertSucceeds(getDoc(doc(db, 'empathyAdvice', 'a2')));
   });
 
+  it('the adviser can read their own advice even before it passes', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'empathyAdvice', 'a4'), advice('pending'));
+    });
+    const db = testEnv.authenticatedContext(BOB).firestore(); // BOB authored it
+    await assertSucceeds(getDoc(doc(db, 'empathyAdvice', 'a4')));
+  });
+
   it('a client cannot write advice directly (functions only)', async () => {
     const db = testEnv.authenticatedContext(BOB).firestore();
     await assertFails(setDoc(doc(db, 'empathyAdvice', 'a3'), advice('pass')));

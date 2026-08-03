@@ -2,15 +2,20 @@ import { useEffect, useState } from 'react';
 import { errorMessage } from '@/lib/errors';
 import { useAuthStore } from '@/features/auth/authStore';
 import { CATEGORY_LABEL, ADVICE_MAX, ADVICE_MIN } from './categories';
-import { submitAdvice, watchOpenPool, type Submission } from './empathyApi';
+import { submitAdvice, watchMyAdvice, watchOpenPool, type Submission } from './empathyApi';
 import { ReportButton } from './ReportButton';
 
 export function AdvicePool() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [subs, setSubs] = useState<Submission[] | null>(null);
+  const [advisedIds, setAdvisedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => watchOpenPool(setSubs, setError), []);
+  useEffect(() => {
+    if (!uid) return;
+    return watchMyAdvice(uid, (advice) => setAdvisedIds(new Set(advice.map((a) => a.submissionId))));
+  }, [uid]);
 
   if (error) return <p className="text-sm text-rose-300">Couldn't load the pool: {error}</p>;
   if (!subs) return <p className="text-sm text-slate-500">Loading the pool…</p>;
@@ -28,13 +33,13 @@ export function AdvicePool() {
   return (
     <ul className="space-y-3">
       {pool.map((s) => (
-        <PoolCard key={s.id} submission={s} />
+        <PoolCard key={s.id} submission={s} advised={advisedIds.has(s.id)} />
       ))}
     </ul>
   );
 }
 
-function PoolCard({ submission }: { submission: Submission }) {
+function PoolCard({ submission, advised }: { submission: Submission; advised: boolean }) {
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -71,6 +76,11 @@ function PoolCard({ submission }: { submission: Submission }) {
         <p className="mt-3 text-sm text-aura-green">
           Sent — thank you. It'll appear once it clears moderation.
         </p>
+      ) : advised ? (
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-xs text-slate-400">You've replied to this one.</span>
+          <ReportButton target="submission" id={submission.id} />
+        </div>
       ) : open ? (
         <div className="mt-3">
           <textarea
