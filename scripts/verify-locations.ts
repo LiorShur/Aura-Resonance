@@ -134,6 +134,14 @@ async function main() {
   }
   if (!issues.length) console.log('  ✓ no structural issues');
 
+  // Satellite links — click each and confirm a person can safely STAND there:
+  // not on a road, rail, water, private property, or inside a building (SAFETY §5).
+  console.log('\n  Satellite check — open each and eyeball the exact spot:');
+  features.forEach((f, i) => {
+    const sat = `https://www.google.com/maps/@${f.lat},${f.lng},20z/data=!3m1!1e3`;
+    console.log(`  #${String(i + 1).padStart(2)} ${f.type.padEnd(12)} ${sat}`);
+  });
+
   console.log(`\n  ${fails.length} FAIL, ${warns.length} WARN`);
   if (features.length < 40) {
     console.log(`  ⚠ ${features.length} points — pilot target is 40–60 (GDD §5).`);
