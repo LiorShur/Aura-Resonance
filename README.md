@@ -56,6 +56,24 @@ the block button forces a block). Real SafeSearch + face blur run only once
 functions are deployed with the Cloud Vision API enabled — that’s where the
 "real photo with a face is blurred and passes" acceptance check is confirmed.
 
+### Co-op quest, two windows (M8)
+
+Co-op Fractures need two players. In two windows (one normal, one incognito),
+each signed into a different account and both in sim mode:
+
+1. Both drag their pin onto the **same** co-op Fracture → **I’m here**.
+2. Window A → **Open a co-op code** → a 4-digit code appears.
+3. Window B → **Join with a code** → enter it. The server verifies both are in
+   range and within 30m of each other, then pairs you.
+4. Both tap **I’m ready** → either taps **Stabilise together** → the Fracture
+   heals and both earn RP. That’s the M8 done-when.
+
+### Echoes (M8)
+
+Tap **✧ Echoes** on the map to leave a 140-char note anchored to your position,
+or read Echoes left within 50m. Each is moderated before it becomes visible
+(keyless in the emulator via the moderation seam).
+
 ## Scripts
 
 | Command | What it does |
