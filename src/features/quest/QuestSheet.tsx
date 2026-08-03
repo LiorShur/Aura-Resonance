@@ -7,6 +7,7 @@ import { FRACTURE_STYLE, type Fracture } from '@/features/map/types';
 import { useTemplate } from './templates';
 import { downscaleImage, makeSimPhoto } from './photo';
 import { BreatheScreen } from '@/features/breathe/BreatheScreen';
+import { CoopFlow } from '@/features/coop/CoopFlow';
 import {
   callCheckIn,
   callVerify,
@@ -48,6 +49,7 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
   const style = FRACTURE_STYLE[fracture.type];
   const isPhoto = template.verification === 'photo';
   const isBreathing = template.verification === 'breathing';
+  const isCoop = template.verification === 'session_code';
 
   const [step, setStep] = useState<Step>('intro');
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -250,6 +252,8 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
                   Begin breathing
                 </button>
               </>
+            ) : isCoop ? (
+              <CoopFlow fracture={fracture} player={player} onHealed={onHealed} />
             ) : (
               <>
                 <p className="mb-3 text-xs text-slate-500">{DIRECT_HINT[template.verification]}</p>

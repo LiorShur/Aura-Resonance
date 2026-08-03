@@ -4,6 +4,7 @@ import { getCurrentPosition } from '@/lib/geolocation';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useSimStore } from '@/sim/simStore';
 import { QuestSheet } from '@/features/quest/QuestSheet';
+import { EchoPanel } from '@/features/echoes/EchoPanel';
 import { SchematicMap } from './SchematicMap';
 import { useFractures } from './useFractures';
 
@@ -25,6 +26,7 @@ export function MapScreen() {
   const setPlayer = useSimStore((s) => s.setPlayer);
   const profile = useAuthStore((s) => s.profile);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [echoesOpen, setEchoesOpen] = useState(false);
 
   const { visible, loading, usingSample, reload } = useFractures(player);
 
@@ -98,6 +100,18 @@ export function MapScreen() {
           finding Fractures…
         </div>
       )}
+
+      {/* Echoes: leave / discover within 50m */}
+      {!selected && !echoesOpen && (
+        <button
+          type="button"
+          onClick={() => setEchoesOpen(true)}
+          className="glass absolute bottom-24 right-3 z-10 rounded-full px-4 py-2.5 text-sm font-medium text-aura-cyan hover:bg-white/10"
+        >
+          ✧ Echoes
+        </button>
+      )}
+      {echoesOpen && <EchoPanel player={player} onClose={() => setEchoesOpen(false)} />}
 
       {/* Selected Fracture → quest flow */}
       {selected && (

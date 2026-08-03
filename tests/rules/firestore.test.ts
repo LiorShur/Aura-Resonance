@@ -363,3 +363,64 @@ describe('moderationQueue + reports — admin-gated (SAFETY §4)', () => {
     await assertFails(getDoc(doc(db, 'reports', 'r1')));
   });
 });
+
+describe('coopSessions — participants only, puzzleState-only writes', () => {
+  const session = (state: string) => ({
+    code: '1234',
+    fractureId: 'f1',
+    hostUid: ALICE,
+    guestUid: BOB,
+    state,
+    hostGeo: { lat: 32, lng: 34 },
+    guestGeo: { lat: 32, lng: 34 },
+    separationM: 10,
+    puzzleState: {},
+    createdAt: new Date(),
+    expiresAt: new Date(),
+  });
+
+  it('a non-participant cannot read the session', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'coopSessions', 'c1'), session('verified'));
+    });
+    const db = testEnv.authenticatedContext('carol').firestore();
+    await assertFails(getDoc(doc(db, 'coopSessions', 'c1')));
+  });
+
+  it('both participants can read the session', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'coopSessions', 'c1'), session('verified'));
+    });
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(ALICE).firestore(), 'coopSessions', 'c1')));
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext(BOB).firestore(), 'coopSessions', 'c1')));
+  });
+
+  it('a client cannot create a session (functions only)', async () => {
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(setDoc(doc(db, 'coopSessions', 'c2'), session('waiting')));
+  });
+
+  it('a participant may write puzzleState once verified', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'coopSessions', 'c1'), session('verified'));
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(updateDoc(doc(db, 'coopSessions', 'c1'), { 'puzzleState.hostReady': true }));
+  });
+
+  it('a participant cannot write puzzleState before verified', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'coopSessions', 'c1'), session('waiting'));
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(updateDoc(doc(db, 'coopSessions', 'c1'), { 'puzzleState.hostReady': true }));
+  });
+
+  it('a participant cannot advance state or touch other fields', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'coopSessions', 'c1'), session('verified'));
+    });
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(updateDoc(doc(db, 'coopSessions', 'c1'), { state: 'complete' }));
+  });
+});
