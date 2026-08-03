@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { errorMessage } from '@/lib/errors';
+import { logEvent } from '@/lib/analytics';
 import { formatDistance, type LatLng } from '@/lib/geo';
 import { ReportButton } from '@/features/empathy/ReportButton';
 import { createEcho, watchEchoesNear, type Echo } from './echoesApi';
@@ -25,6 +26,7 @@ export function EchoPanel({ player, onClose }: { player: LatLng; onClose: () => 
     setError(null);
     try {
       await createEcho(text, player);
+      logEvent('echo_create');
       setText('');
       setPosted(true);
       // Give moderateEcho a moment, then refresh the nearby list.

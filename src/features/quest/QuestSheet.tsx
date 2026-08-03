@@ -3,6 +3,7 @@ import { bearingDeg, compassPoint, formatDistance, type LatLng } from '@/lib/geo
 import { getCurrentPosition } from '@/lib/geolocation';
 import { errorMessage } from '@/lib/errors';
 import { env } from '@/lib/env';
+import { logEvent } from '@/lib/analytics';
 import { FRACTURE_STYLE, type Fracture } from '@/features/map/types';
 import { useTemplate } from './templates';
 import { downscaleImage, makeSimPhoto } from './photo';
@@ -59,6 +60,11 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
   const [pendingLong, setPendingLong] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Funnel: the player opened this Fracture (GDD §6).
+  useEffect(() => {
+    logEvent('quest_view', { fractureId: fracture.id, type: fracture.type });
+  }, [fracture.id, fracture.type]);
+
   // While a photo is in moderation, watch the attempt for its resolution rather
   // than leaving the player on a spinner (the trigger writes the outcome).
   useEffect(() => {
@@ -66,6 +72,7 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
     const unsub = watchAttempt(attemptId, (snap) => {
       if (snap.state === 'verified') {
         setDone({ awarded: snap.awardedRp ?? 0, capped: snap.awardCapped });
+        logEvent('quest_verified', { fractureId: fracture.id, type: fracture.type });
         setStep('done');
         onHealed();
       } else if (snap.state === 'rejected') {
@@ -100,6 +107,7 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
         setRemaining(r.remainingM);
         setStep('intro');
       } else {
+        logEvent('quest_checkin', { fractureId: fracture.id, type: fracture.type });
         setStep('checked_in');
       }
     } catch (e) {
@@ -122,6 +130,7 @@ export function QuestSheet({ fracture, distanceM, player, isSample, onClose, onH
     try {
       const r = await callVerify(attemptId, opts);
       setDone({ awarded: r.awarded, capped: r.capped });
+      logEvent('quest_verified', { fractureId: fracture.id, type: fracture.type });
       setStep('done');
       onHealed();
     } catch (e) {

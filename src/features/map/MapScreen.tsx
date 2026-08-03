@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { env } from '@/lib/env';
+import { firebase } from '@/lib/firebase';
 import { getCurrentPosition } from '@/lib/geolocation';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useSimStore } from '@/sim/simStore';
@@ -27,6 +29,16 @@ export function MapScreen() {
   const profile = useAuthStore((s) => s.profile);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [echoesOpen, setEchoesOpen] = useState(false);
+  const [brightness, setBrightness] = useState<number | null>(null);
+
+  // Neighbourhood brightness — the recomputeMapBrightness aggregate (GDD §4).
+  useEffect(
+    () =>
+      onSnapshot(doc(firebase().db, 'config', 'mapBrightness'), (d) =>
+        setBrightness(typeof d.data()?.overall === 'number' ? (d.data()!.overall as number) : null),
+      ),
+    [],
+  );
 
   const { visible, loading, usingSample, reload } = useFractures(player);
 
@@ -50,9 +62,16 @@ export function MapScreen() {
           <span className="font-display text-lg tracking-wide text-aura-cyan">Aura</span>
           <span className="ml-2 text-slate-400">Lv {profile?.auraLevel ?? 1}</span>
         </div>
-        <div className="glass pointer-events-auto rounded-2xl px-3 py-1.5 text-sm">
-          <span className="text-slate-400">RP</span>{' '}
-          <span className="font-semibold text-slate-100">{profile?.resonancePoints ?? 0}</span>
+        <div className="flex flex-col items-end gap-1">
+          <div className="glass pointer-events-auto rounded-2xl px-3 py-1.5 text-sm">
+            <span className="text-slate-400">RP</span>{' '}
+            <span className="font-semibold text-slate-100">{profile?.resonancePoints ?? 0}</span>
+          </div>
+          {brightness !== null && (
+            <div className="glass pointer-events-auto rounded-2xl px-3 py-1 text-xs text-aura-cyan">
+              ✧ {Math.round(brightness * 100)}%
+            </div>
+          )}
         </div>
       </div>
 

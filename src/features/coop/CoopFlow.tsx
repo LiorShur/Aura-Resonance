@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { errorMessage } from '@/lib/errors';
+import { logEvent } from '@/lib/analytics';
 import type { LatLng } from '@/lib/geo';
 import { useAuthStore } from '@/features/auth/authStore';
 import type { Fracture } from '@/features/map/types';
@@ -48,10 +49,11 @@ export function CoopFlow({
     if (session.state === 'verified' || session.state === 'solving') {
       setStep((s) => (s === 'hosting' || s === 'joining' ? 'active' : s));
     } else if (session.state === 'complete') {
+      logEvent('coop_complete', { fractureId: fracture.id });
       setStep('done');
       onHealed();
     }
-  }, [session, onHealed]);
+  }, [session, onHealed, fracture.id]);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);

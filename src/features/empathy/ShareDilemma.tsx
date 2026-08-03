@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { errorMessage } from '@/lib/errors';
+import { logEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/features/auth/authStore';
 import { CATEGORIES, DILEMMA_MAX, DILEMMA_MIN } from './categories';
 import { submitDilemma, watchSubmission, type Submission } from './empathyApi';
@@ -27,6 +28,7 @@ export function ShareDilemma() {
     setError(null);
     try {
       setSubmissionId(await submitDilemma(body, category));
+      logEvent('empathy_submit', { category });
     } catch (e) {
       setError(errorMessage(e));
     } finally {
