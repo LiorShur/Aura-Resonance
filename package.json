@@ -21,6 +21,7 @@
     "seed": "tsx scripts/seed-config.ts && tsx scripts/seed-templates.ts && tsx scripts/seed-fractures.ts",
     "seed:live": "tsx scripts/seed-config.ts --live && tsx scripts/seed-templates.ts --live && tsx scripts/seed-fractures.ts --live",
     "seed:verify": "tsx scripts/verify-locations.ts",
+    "poi:seed": "tsx scripts/poi-seed.ts",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
     "deploy:functions": "npm --prefix functions install && firebase deploy --only functions",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
