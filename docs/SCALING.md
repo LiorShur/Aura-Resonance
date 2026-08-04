@@ -42,6 +42,12 @@ on **community or operator review** for safety. `scripts/poi-seed.ts` is the fir
 seed of the "propose from POI data" step — it drafts a `fractures.geojson` from
 OpenStreetMap public-space POIs, which a human then trims and satellite-checks.
 
+> The **player-submissions + review** half of this hybrid is designed out in detail
+> in [`FRACTURE_PROPOSALS.md`](./FRACTURE_PROPOSALS.md) — the `fractureProposals`
+> schema, gated submit/review/promote functions, rules, and the Wayfarer lesson that
+> community review only works once there are enough independent reviewers (so it
+> starts as operator review). Design only; not built in v0.
+
 ## What each shape would require to build
 
 - **Submissions + review:** a `fractureProposals` collection, a submit callable
