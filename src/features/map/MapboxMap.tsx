@@ -14,6 +14,10 @@ interface MapboxMapProps {
   draggable: boolean;
   onSelect: (id: string) => void;
   onPlayerMove: (pos: LatLng) => void;
+  /** Fires with the map's centre after a pan (explore mode). */
+  onCentreChange?: (pos: LatLng) => void;
+  /** Bump to recentre the map back on the player. */
+  recentreSignal?: number;
 }
 
 function fractureEl(type: Fracture['type'], selected: boolean): HTMLElement {
@@ -87,6 +91,15 @@ export function MapboxMap(props: MapboxMapProps) {
     });
     playerMarker.current = pm;
 
+    // Explore mode: report the map centre after any pan/zoom the user drives, so
+    // MapScreen can fetch Fractures around where they're looking rather than only
+    // around the player pin. Guarded by the drag flag so dragging the player pin
+    // (which also moves the centre via easeTo) doesn't double-report.
+    map.on('moveend', () => {
+      if (dragging.current) return;
+      cbs.current.onCentreChange?.({ lat: map.getCenter().lat, lng: map.getCenter().lng });
+    });
+
     return () => {
       // map.remove() detaches every marker it owns; the component (and its refs)
       // is torn down with it, so there is nothing else to clean up.
@@ -133,6 +146,16 @@ export function MapboxMap(props: MapboxMapProps) {
     pm.setLngLat([props.player.lng, props.player.lat]);
     map.easeTo({ center: [props.player.lng, props.player.lat], duration: 400 });
   }, [props.player]);
+
+  // Explore mode: ease the view back to the player when MapScreen bumps the
+  // recentre signal. Skipped on the initial render (signal 0 / undefined).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !props.recentreSignal) return;
+    map.easeTo({ center: [props.player.lng, props.player.lat], duration: 500 });
+    // Only react to the signal; player is read fresh at fire time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.recentreSignal]);
 
   // Optional fake co-op partner.
   useEffect(() => {

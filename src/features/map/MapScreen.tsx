@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { env } from '@/lib/env';
 import { firebase } from '@/lib/firebase';
+import { distanceM, type LatLng } from '@/lib/geo';
 import { getCurrentPosition } from '@/lib/geolocation';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useSimStore } from '@/sim/simStore';
@@ -31,6 +32,12 @@ export function MapScreen() {
   const [echoesOpen, setEchoesOpen] = useState(false);
   const [brightness, setBrightness] = useState<number | null>(null);
   const [coachDismissed, setCoachDismissed] = useState(false);
+  // Explore mode: when the player pans the map well away from their pin, fetch
+  // Fractures around where they're looking instead of only around themselves.
+  // Cleared (back to following the player) once they pan near the pin again or
+  // tap "Recenter". `recentreSignal` is bumped to command the map to ease back.
+  const [exploreCentre, setExploreCentre] = useState<LatLng | null>(null);
+  const [recentreSignal, setRecentreSignal] = useState(0);
   // First-run guidance: shown until the player heals their first Fracture.
   const showCoach = !coachDismissed && (profile?.stats.questsCompleted ?? 0) === 0;
 
@@ -43,7 +50,20 @@ export function MapScreen() {
     [],
   );
 
-  const { visible, loading, usingSample, reload } = useFractures(player);
+  // Fetch/display around the explore centre when set, else follow the player.
+  const viewCentre = exploreCentre ?? player;
+  const { visible, loading, usingSample, reload } = useFractures(viewCentre);
+
+  // A pan more than ~400 m from the player enters explore mode; panning back near
+  // the pin exits it. The threshold keeps small GPS jitter from latching explore.
+  const EXPLORE_THRESHOLD_M = 400;
+  const onCentreChange = (c: LatLng) => {
+    setExploreCentre(distanceM(c, player) > EXPLORE_THRESHOLD_M ? c : null);
+  };
+  const recenter = () => {
+    setExploreCentre(null);
+    setRecentreSignal((n) => n + 1);
+  };
 
   // Live mode: seed the initial position once (foreground, on demand only).
   useEffect(() => {
@@ -98,6 +118,8 @@ export function MapScreen() {
             draggable={env.simMode}
             onSelect={setSelectedId}
             onPlayerMove={setPlayer}
+            onCentreChange={onCentreChange}
+            recentreSignal={recentreSignal}
           />
         </Suspense>
       ) : (
@@ -146,6 +168,17 @@ export function MapScreen() {
         </div>
       )}
 
+      {/* Explore mode: snap the view back to the player. */}
+      {exploreCentre && !selected && !echoesOpen && (
+        <button
+          type="button"
+          onClick={recenter}
+          className="glass absolute bottom-24 left-3 z-10 rounded-full px-4 py-2.5 text-sm font-medium text-aura-cyan hover:bg-white/10"
+        >
+          ◎ Recenter on me
+        </button>
+      )}
+
       {/* Echoes: leave / discover within 50m */}
       {!selected && !echoesOpen && (
         <button
@@ -163,7 +196,10 @@ export function MapScreen() {
         <QuestSheet
           key={selected.fracture.id}
           fracture={selected.fracture}
-          distanceM={selected.distanceM}
+          // Always player-relative: in explore mode the ranked distanceM is
+          // measured from the panned view centre, but check-in gates on the
+          // player's own distance to the Fracture.
+          distanceM={distanceM(player, selected.fracture.geo)}
           player={player}
           isSample={usingSample}
           onClose={() => setSelectedId(null)}
