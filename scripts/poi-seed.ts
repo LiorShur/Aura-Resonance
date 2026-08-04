@@ -131,8 +131,25 @@ async function main() {
     features,
   };
 
-  console.error(`[poi-seed] emitting ${features.length} features. REVIEW EACH before seeding.`);
+  // Clean GeoJSON on stdout (redirect to a file); the review list on stderr so
+  // you can eyeball every candidate on satellite in the same command.
   process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+
+  console.error(
+    `\n[poi-seed] ${features.length} candidates. REVIEW EACH on satellite before seeding ` +
+      `(SAFETY §5) — a person must be able to safely stand there:`,
+  );
+  features.forEach((f, i) => {
+    const [clng, clat] = f.geometry.coordinates as [number, number];
+    const sat = `https://www.google.com/maps/@${clat},${clng},20z/data=!3m1!1e3`;
+    console.error(`  #${String(i + 1).padStart(2)} ${f.properties.type.padEnd(12)} ${sat}`);
+  });
+  console.error(
+    `\n[poi-seed] Next: trim the drafted file to the spots you approve, then:` +
+      `\n  npm run seed:verify -- <your-draft>.geojson   (re-check + links, any file)` +
+      `\n  # once happy, make it the canonical set and push:` +
+      `\n  #   copy it over scripts/data/fractures.geojson, then  npm run seed:live\n`,
+  );
 }
 
 main().catch((err) => {

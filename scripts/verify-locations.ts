@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 /**
  * Structural / geographic sanity check for seed Fractures. This CANNOT confirm a
@@ -76,8 +77,11 @@ async function main() {
   );
   const templateById = new Map(templateList.map((t) => [t.id, t]));
 
+  // Verify a specific file if given (e.g. a poi-seed draft), else the canonical set.
+  const arg = process.argv.slice(2).find((a) => !a.startsWith('-'));
+  const dataPath = arg ? resolve(process.cwd(), arg) : DATA;
   const { features, neighbourhoodId } = loadFractureFeatures(
-    JSON.parse(await readFile(DATA, 'utf8')),
+    JSON.parse(await readFile(dataPath, 'utf8')),
   );
 
   const issues: Issue[] = [];
