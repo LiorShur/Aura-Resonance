@@ -31,6 +31,7 @@ const SELECTORS = [
   'nwr["amenity"="community_centre"]',
   'nwr["amenity"="library"]',
   'nwr["amenity"="townhall"]',
+  'nwr["amenity"="place_of_worship"]',
   'nwr["tourism"="attraction"]',
   'node["tourism"="viewpoint"]',
   'node["tourism"="artwork"]',
@@ -79,6 +80,7 @@ function classify(tags: Tags): { category: Category; named: boolean } | null {
     tags.amenity === 'community_centre' ||
     tags.amenity === 'library' ||
     tags.amenity === 'townhall' ||
+    tags.amenity === 'place_of_worship' ||
     tags.tourism === 'attraction'
   ) {
     return { category: 'social', named };
@@ -119,7 +121,7 @@ async function main() {
   const query =
     `[out:json][timeout:25];(` +
     SELECTORS.map((s) => `${s}(around:${radius},${lat},${lng});`).join('') +
-    `);out center tags ${count * 10};`;
+    `);out center ${count * 10};`;
 
   console.error(`[poi-seed] querying Overpass around ${lat},${lng} (${radius}m)…`);
   const res = await fetch(OVERPASS, {
