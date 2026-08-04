@@ -1,52 +1,102 @@
 /**
  * PROTOTYPE Fracture seeder from OpenStreetMap public-space POIs (see
  * docs/SCALING.md — the first step of an eventual "propose from POI data"
- * pipeline). Queries the Overpass API for safe, stand-able public features near a
- * point and emits a fractures.geojson DRAFT.
+ * pipeline). Queries the Overpass API for PUBLICLY ACCESSIBLE, stand-able places
+ * near a point and emits a fractures.geojson DRAFT.
  *
  *   npx tsx scripts/poi-seed.ts <lat> <lng> [radiusM=800] [count=20] > out.geojson
- *   npx tsx scripts/poi-seed.ts -33.9427 18.4034 800 24 > scripts/data/fractures.cape.geojson
+ *   npm run poi:seed -- -33.9427 18.4034 800 24 > scripts/data/fractures.cape.geojson
  *
- * ⚠ These are UNVERIFIED candidates. OSM data is not a safety guarantee — every
- *   point MUST still be eyeballed against satellite imagery (SAFETY §5) with
- *   `npm run seed:verify` before it goes anywhere near players. Trim ruthlessly.
+ * Selection is ACCESSIBILITY-FIRST: places tagged access=private/no/customers are
+ * rejected, and bare parks/gardens (often private) are excluded in favour of
+ * squares, pedestrian plazas, marketplaces, tourist/historic landmarks, community
+ * centres, and libraries — public by nature and easy for a player to find.
  *
- * Logs go to stderr so stdout stays clean GeoJSON you can redirect to a file.
+ * ⚠ Still UNVERIFIED. OSM tags are not a safety guarantee — every point MUST be
+ *   eyeballed against satellite imagery (SAFETY §5) before it reaches players.
+ *   Community centres / care homes for real volunteering are PARTNERSHIPS, not
+ *   scraped POIs (safeguarding) — see docs/SCALING.md.
+ *
+ * Logs + the review links go to stderr so stdout stays clean GeoJSON.
  */
 
-// Public Overpass endpoint. Override with OVERPASS_URL if this one rate-limits
-// or 403s — mirrors: https://overpass.kumi.systems/api/interpreter,
-// https://maps.mail.ru/osm/tools/overpass/api/interpreter
 const OVERPASS = process.env.OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter';
-const SPACING_M = 25; // don't place two Fractures on top of each other
+const SPACING_M = 25;
 
-// Only public, stand-able features — never roads, buildings, or private land.
+// Public, legible, stand-able categories. Deliberately NOT bare parks/gardens.
 const SELECTORS = [
-  'node["amenity"="bench"]',
-  'node["amenity"="drinking_water"]',
-  'node["amenity"="fountain"]',
-  'node["amenity"="public_bookcase"]',
+  'nwr["place"="square"]',
+  'way["highway"="pedestrian"]',
+  'nwr["amenity"="marketplace"]',
+  'nwr["amenity"="community_centre"]',
+  'nwr["amenity"="library"]',
+  'nwr["amenity"="townhall"]',
+  'nwr["tourism"="attraction"]',
   'node["tourism"="viewpoint"]',
   'node["tourism"="artwork"]',
-  'nwr["leisure"="park"]',
-  'nwr["leisure"="garden"]',
+  'nwr["historic"="monument"]',
+  'nwr["historic"="memorial"]',
+  'node["amenity"="fountain"]',
+  'node["amenity"="drinking_water"]',
+  'node["amenity"="bench"]',
 ];
 
-// Distribution of Fracture types, and the seeded templateIds each can use
-// (must exist in scripts/data/quest-templates.json).
-const TYPE_PLAN: Array<{ type: string; radiusM: number; templates: string[] }> = [
-  { type: 'kindness', radiusM: 50, templates: ['litter-01', 'greet-01', 'echo-01', 'nature-01', 'help-01', 'gratitude-01', 'community-01'] },
-  { type: 'high_tension', radiusM: 60, templates: ['breathe-01', 'breathe-02', 'breathe-03', 'breathe-04'] },
-  { type: 'coop', radiusM: 70, templates: ['coop-01', 'coop-02', 'coop-03'] },
-];
-// ~70% kindness, ~20% high-tension, ~10% co-op, assigned round-robin by index.
-const TYPE_SEQUENCE = ['kindness', 'kindness', 'kindness', 'kindness', 'kindness', 'kindness', 'kindness', 'high_tension', 'high_tension', 'coop'];
+// Anything tagged with these access values is NOT open to the public — reject.
+const PRIVATE_ACCESS = new Set([
+  'private', 'no', 'customers', 'permit', 'agricultural', 'forestry', 'delivery', 'military',
+]);
 
+// Fracture types → seeded templateIds (must exist in quest-templates.json).
+const TEMPLATES: Record<string, string[]> = {
+  kindness: ['litter-01', 'greet-01', 'echo-01', 'nature-01', 'help-01', 'gratitude-01', 'community-01'],
+  high_tension: ['breathe-01', 'breathe-02', 'breathe-03', 'breathe-04'],
+  coop: ['coop-01', 'coop-02', 'coop-03'],
+};
+const RADIUS: Record<string, number> = { kindness: 50, high_tension: 60, coop: 70 };
+
+type Category = 'social' | 'scenic';
+
+interface Tags {
+  [k: string]: string | undefined;
+}
 interface Element {
-  type: string;
   lat?: number;
   lon?: number;
   center?: { lat: number; lon: number };
+  tags?: Tags;
+}
+
+/** Classify a POI, or reject it (null). Access-private is always rejected. */
+function classify(tags: Tags): { category: Category; named: boolean } | null {
+  if (tags.access && PRIVATE_ACCESS.has(tags.access)) return null;
+  const named = Boolean(tags.name);
+
+  // Busy, social places — good for kindness acts and co-op meetups.
+  if (
+    tags.place === 'square' ||
+    tags.highway === 'pedestrian' ||
+    tags.amenity === 'marketplace' ||
+    tags.amenity === 'community_centre' ||
+    tags.amenity === 'library' ||
+    tags.amenity === 'townhall' ||
+    tags.tourism === 'attraction'
+  ) {
+    return { category: 'social', named };
+  }
+  // Quiet, scenic anchors — good for a breathing pause.
+  if (
+    tags.tourism === 'viewpoint' ||
+    tags.tourism === 'artwork' ||
+    tags.historic === 'monument' ||
+    tags.historic === 'memorial' ||
+    tags.amenity === 'fountain' ||
+    tags.amenity === 'bench'
+  ) {
+    return { category: 'scenic', named };
+  }
+  // Small public utilities — usable, but low priority (kindness).
+  if (tags.amenity === 'drinking_water') return { category: 'social', named: false };
+  return null;
 }
 
 const M_PER_DEG_LAT = 111_320;
@@ -69,14 +119,13 @@ async function main() {
   const query =
     `[out:json][timeout:25];(` +
     SELECTORS.map((s) => `${s}(around:${radius},${lat},${lng});`).join('') +
-    `);out center ${count * 8};`;
+    `);out center tags ${count * 10};`;
 
   console.error(`[poi-seed] querying Overpass around ${lat},${lng} (${radius}m)…`);
   const res = await fetch(OVERPASS, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      // Overpass requires a real User-Agent and 403s generic clients.
       'User-Agent': 'aura-resonance-poi-seed/0.0 (pilot tooling)',
     },
     body: `data=${encodeURIComponent(query)}`,
@@ -89,32 +138,61 @@ async function main() {
     process.exit(1);
   }
   const data = (await res.json()) as { elements?: Element[] };
-  const elements = data.elements ?? [];
-  console.error(`[poi-seed] ${elements.length} raw POIs returned.`);
+  const raw = data.elements ?? [];
+  console.error(`[poi-seed] ${raw.length} raw POIs returned.`);
 
-  // Normalise to points, drop anything without coordinates, space them out.
-  const picked: Array<{ lat: number; lng: number }> = [];
-  for (const el of elements) {
+  // Classify + reject private/uncategorised, keep coordinates.
+  interface Candidate {
+    lat: number;
+    lng: number;
+    category: Category;
+    named: boolean;
+    name: string;
+  }
+  const candidates: Candidate[] = [];
+  for (const el of raw) {
     const lat2 = el.lat ?? el.center?.lat;
     const lng2 = el.lon ?? el.center?.lon;
     if (typeof lat2 !== 'number' || typeof lng2 !== 'number') continue;
-    const pt = { lat: lat2, lng: lng2 };
-    if (picked.some((p) => distanceM(p, pt) < SPACING_M)) continue;
-    picked.push(pt);
+    const c = classify(el.tags ?? {});
+    if (!c) continue;
+    candidates.push({ lat: lat2, lng: lng2, category: c.category, named: c.named, name: el.tags?.name ?? '' });
+  }
+
+  // Prefer NAMED places (more legible), then space them out.
+  candidates.sort((a, b) => Number(b.named) - Number(a.named));
+  const picked: Candidate[] = [];
+  for (const c of candidates) {
+    if (picked.some((p) => distanceM(p, c) < SPACING_M)) continue;
+    picked.push(c);
     if (picked.length >= count) break;
   }
-  console.error(`[poi-seed] ${picked.length} candidates after spacing (${SPACING_M}m apart).`);
+  const social = picked.filter((p) => p.category === 'social').length;
+  console.error(
+    `[poi-seed] ${picked.length} candidates after access-filter + spacing ` +
+      `(${social} social, ${picked.length - social} scenic).`,
+  );
 
-  const typeCounts: Record<string, number> = {};
-  const features = picked.map((pt, i) => {
-    const typeName = TYPE_SEQUENCE[i % TYPE_SEQUENCE.length]!;
-    const plan = TYPE_PLAN.find((t) => t.type === typeName)!;
-    const n = (typeCounts[typeName] = (typeCounts[typeName] ?? 0) + 1);
-    const templateId = plan.templates[(n - 1) % plan.templates.length]!;
+  // Map category → Fracture type: social mostly kindness (every 5th a co-op
+  // meetup point); scenic → breathing. Template IDs cycle within each type.
+  const counts: Record<string, number> = {};
+  let socialSeen = 0;
+  const features = picked.map((c) => {
+    let type: string;
+    if (c.category === 'scenic') type = 'high_tension';
+    else type = ++socialSeen % 5 === 0 ? 'coop' : 'kindness';
+    const n = (counts[type] = (counts[type] ?? 0) + 1);
+    const templates = TEMPLATES[type]!;
     return {
       type: 'Feature',
-      properties: { type: typeName, templateId, radiusM: plan.radiusM, activeHours: { from: 6, to: 21 } },
-      geometry: { type: 'Point', coordinates: [Number(pt.lng.toFixed(6)), Number(pt.lat.toFixed(6))] },
+      properties: {
+        type,
+        templateId: templates[(n - 1) % templates.length]!,
+        radiusM: RADIUS[type]!,
+        activeHours: { from: 6, to: 21 },
+        ...(c.name ? { osmName: c.name } : {}),
+      },
+      geometry: { type: 'Point', coordinates: [Number(c.lng.toFixed(6)), Number(c.lat.toFixed(6))] },
     };
   });
 
@@ -122,33 +200,31 @@ async function main() {
     type: 'FeatureCollection',
     metadata: {
       note:
-        'DRAFT from OpenStreetMap POIs via scripts/poi-seed.ts. UNVERIFIED — every ' +
-        'point must be eyeballed against satellite imagery (SAFETY §5) and trimmed ' +
-        'before use. Coordinates are [lng, lat].',
+        'DRAFT from OpenStreetMap public POIs via scripts/poi-seed.ts (access-filtered). ' +
+        'UNVERIFIED — eyeball every point on satellite (SAFETY §5) and trim before use. ' +
+        'Coordinates are [lng, lat]. osmName is a hint only.',
       source: `overpass around ${radius}m of ${lat},${lng}`,
       neighbourhoodId: 'draft',
     },
     features,
   };
 
-  // Clean GeoJSON on stdout (redirect to a file); the review list on stderr so
-  // you can eyeball every candidate on satellite in the same command.
   process.stdout.write(JSON.stringify(out, null, 2) + '\n');
 
   console.error(
     `\n[poi-seed] ${features.length} candidates. REVIEW EACH on satellite before seeding ` +
-      `(SAFETY §5) — a person must be able to safely stand there:`,
+      `(SAFETY §5) — a person must be able to safely, publicly stand there:`,
   );
   features.forEach((f, i) => {
     const [clng, clat] = f.geometry.coordinates as [number, number];
     const sat = `https://www.google.com/maps/@${clat},${clng},20z/data=!3m1!1e3`;
-    console.error(`  #${String(i + 1).padStart(2)} ${f.properties.type.padEnd(12)} ${sat}`);
+    const label = (f.properties as { osmName?: string }).osmName ?? '(unnamed)';
+    console.error(`  #${String(i + 1).padStart(2)} ${f.properties.type.padEnd(12)} ${sat}  ${label}`);
   });
   console.error(
-    `\n[poi-seed] Next: trim the drafted file to the spots you approve, then:` +
-      `\n  npm run seed:verify -- <your-draft>.geojson   (re-check + links, any file)` +
-      `\n  # once happy, make it the canonical set and push:` +
-      `\n  #   copy it over scripts/data/fractures.geojson, then  npm run seed:live\n`,
+    `\n[poi-seed] Trim to the spots you approve, then:` +
+      `\n  npm run seed:verify -- <your-draft>.geojson   (re-check + links)` +
+      `\n  # copy over scripts/data/fractures.geojson, then  npm run seed:live\n`,
   );
 }
 

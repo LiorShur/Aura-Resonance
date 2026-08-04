@@ -60,6 +60,37 @@ Do **not** build this until retention is proven. When it is, start with
 **algorithmic proposal** underneath to reduce curation load. `poi-seed.ts` is a
 low-risk down-payment usable even for the pilot's next neighbourhood.
 
+## Location selection — what actually makes a good Fracture
+
+A good location is a **conjunction**, and the category matters less than these:
+
+1. **Publicly accessible** — no gate, no permission. This is the biggest lever and
+   the one naive "greenspace" selection gets wrong (OSM parks/gardens are often
+   private). Filter on `access=private|no|customers|permit|…` first.
+2. **Safe to stand** — never a roadway, blind corner, or mid-traffic. Rural street
+   *corners/intersections are a bad idea* for this reason.
+3. **Appropriate & legible** — a place that makes sense to stand at and that a
+   player can find ("the fountain in the square"), matched to the quest type.
+
+**Prefer, by nature public + findable:** squares (`place=square`), pedestrian
+plazas (`highway=pedestrian`), marketplaces, tourist/historic landmarks
+(`tourism`, `historic`), community centres, libraries, town halls. `poi-seed.ts`
+now targets these and rejects private-access tags. **Popularity is the best
+automatable "is this really public" signal** — Google Places `user_ratings_total`
+is the strongest ranker if/when a Places variant is added (ToS: curation tool,
+not a stored dataset).
+
+**Real-volunteering locations are PARTNERSHIPS, not scrapes.** Community centres,
+charities, and care homes are the highest-*meaning* Fractures — but sending
+strangers there unannounced is a safeguarding risk. They must opt in and know
+players may come. This is a partner-onboarding flow (a special Fracture type),
+firmly v1+. Never scrape schools or care homes as generic POIs.
+
+**Rural is where automation fails honestly.** Low POI density; the real anchors
+are social (local shop, church, community hall, taxi rank, known landmark). Lean
+on a **local-ambassador model** — a resident seeds and vets their own patch —
+over any global dataset.
+
 ## Non-negotiables for any future model
 
 1. Every live Fracture has passed a **human safety review** (§5).
