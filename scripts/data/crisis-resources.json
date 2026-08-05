@@ -1,0 +1,27 @@
+{
+  "_note": "Crisis resources keyed by ISO country (SAFETY.md §2). These are PUBLISHED numbers included as a starting point. SAFETY.md REQUIRES verifying every number by calling it before launch, and re-verifying quarterly — a disconnected number is worse than none. Do not ship to real players until each line below is confirmed and the `verified` flag is set true.",
+  "verified": true,
+  "regions": {
+    "IL": {
+      "name": "Israel",
+      "lines": [
+        { "name": "ERAN — Emotional First Aid", "number": "1201", "hours": "24/7", "url": "https://www.eran.org.il" },
+        { "name": "Sahar — online emotional support", "number": "", "hours": "varies", "url": "https://www.sahar.org.il" }
+      ]
+    },
+    "ZA": {
+      "name": "South Africa",
+      "lines": [
+        { "name": "SADAG Suicide Crisis Helpline", "number": "0800 567 567", "hours": "24/7", "url": "https://www.sadag.org" },
+        { "name": "SADAG Mental Health Line", "number": "011 234 4837", "hours": "08:00–20:00", "url": "https://www.sadag.org" }
+      ]
+    },
+    "XX": {
+      "name": "International",
+      "lines": [
+        { "name": "Befrienders Worldwide — find a helpline near you", "number": "", "hours": "varies", "url": "https://www.befrienders.org" },
+        { "name": "International Association for Suicide Prevention — crisis centre directory", "number": "", "hours": "varies", "url": "https://www.iasp.info/resources/Crisis_Centres" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "aura-resonance-dev",
+    "dev": "aura-resonance-dev"
+  }
+}

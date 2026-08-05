@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "note": "EXAMPLE seed set — NOT the curated pilot data. Replace these with 40–60 hand-picked public locations for your real test neighbourhood. Every point must be eyeballed against satellite imagery per docs/SAFETY.md §5: never on private property, a roadway, a rail line, or anywhere unsafe to stand. Coordinates are [lng, lat].",
+    "neighbourhoodId": "sim"
+  },
+  "features": [
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "litter-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7822, 32.0861] } },
+    { "type": "Feature", "properties": { "type": "high_tension", "templateId": "breathe-01", "radiusM": 60, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7805, 32.0848] } },
+    { "type": "Feature", "properties": { "type": "coop", "templateId": "coop-01", "radiusM": 70, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7840, 32.0866] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "greet-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7831, 32.0840] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "echo-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7809, 32.0872] } },
+    { "type": "Feature", "properties": { "type": "high_tension", "templateId": "breathe-02", "radiusM": 60, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7815, 32.0835] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "nature-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7848, 32.0851] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "help-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7796, 32.0858] } },
+    { "type": "Feature", "properties": { "type": "coop", "templateId": "coop-02", "radiusM": 70, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7833, 32.0873] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "gratitude-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7826, 32.0847] } },
+    { "type": "Feature", "properties": { "type": "high_tension", "templateId": "breathe-03", "radiusM": 60, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7801, 32.0839] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "community-01", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7855, 32.0862] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "echo-02", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7790, 32.0845] } },
+    { "type": "Feature", "properties": { "type": "kindness", "templateId": "greet-02", "radiusM": 50, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7843, 32.0834] } },
+    { "type": "Feature", "properties": { "type": "high_tension", "templateId": "breathe-04", "radiusM": 60, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7819, 32.0877] } },
+    { "type": "Feature", "properties": { "type": "coop", "templateId": "coop-03", "radiusM": 70, "activeHours": { "from": 6, "to": 21 } }, "geometry": { "type": "Point", "coordinates": [34.7860, 32.0844] } }
+  ]
+}

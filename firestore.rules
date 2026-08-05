@@ -1,0 +1,133 @@
+rules_version = '2';
+
+// Baseline security rules for the v0 pilot. The cardinal rule (docs/SCHEMA.md):
+// the client NEVER writes points, levels, healing state, or moderation status —
+// those are Cloud Function territory. Deny by default; open the narrow paths.
+//
+// M1 hardens these AND adds the emulator test suite that is their real spec:
+// tests asserting a client cannot write `resonancePoints`, cannot advance
+// `questAttempts.state`, and cannot read an unscreened `empathySubmission`.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+    // Only the listed fields differ between the existing and incoming document.
+    function onlyChanging(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(fields);
+    }
+
+    // Users: self may edit vanity fields only. The document is CREATED by the
+    // createProfile function (after the age gate) — never by the client, so that
+    // points/level/strikes can't be seeded to arbitrary values on first write.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if false;
+      allow update: if isSelf(uid)
+        && onlyChanging(['displayName', 'avatarSeed', 'lastActiveAt']);
+      allow delete: if false;
+
+      // Append-only, function-written audit trail.
+      match /ledger/{entryId} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+    }
+
+    // Seeded, read-only game content.
+    match /fractures/{id}       { allow read: if signedIn(); allow write: if false; }
+    match /questTemplates/{id}  { allow read: if signedIn(); allow write: if false; }
+    match /config/{id}          { allow read: if signedIn(); allow write: if false; }
+
+    // Quest attempts: client may only create in the `started` state. Every
+    // transition past that goes through submitCheckIn / submitVerification.
+    match /questAttempts/{id} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.state == 'started';
+      allow update, delete: if false;
+    }
+
+    // Echoes: visible only when moderation passed and not auto-hidden.
+    // All writes go through the createEcho / moderation functions.
+    match /echoes/{id} {
+      allow read: if signedIn()
+        && resource.data.moderation.status == 'pass'
+        && resource.data.hidden == false;
+      allow write: if false;
+    }
+
+    // Empathy submissions are invisible until the crisis screen passes.
+    match /empathySubmissions/{id} {
+      allow read: if signedIn() && (
+        resource.data.authorUid == request.auth.uid ||
+        (resource.data.safetyScreen.status == 'passed' && resource.data.state == 'open')
+      );
+      allow write: if false;
+    }
+
+    // Advice is visible to others once moderation passes; the adviser can always
+    // read their own (to see status + the rating they received), like the
+    // submission author can read their own pending submission.
+    match /empathyAdvice/{id} {
+      allow read: if signedIn() && (
+        resource.data.moderation.status == 'pass' ||
+        resource.data.authorUid == request.auth.uid
+      );
+      allow write: if false;
+    }
+
+    // Media + queue: function-mediated.
+    match /media/{id}          { allow read: if signedIn(); allow write: if false; }
+    match /moderationQueue/{id}{ allow read: if isAdmin(); allow write: if false; }
+
+    // Co-op: readable by its two participants. Sessions are created/advanced by
+    // functions (open/join/complete); the ONLY client write is the shared
+    // puzzleState, and only once the session is verified — so a client can never
+    // flip a session to complete or award itself points.
+    match /coopSessions/{id} {
+      function participant() {
+        return signedIn() && (
+          resource.data.hostUid == request.auth.uid ||
+          resource.data.guestUid == request.auth.uid
+        );
+      }
+      allow read: if participant();
+      allow update: if participant()
+        && resource.data.state in ['verified', 'solving']
+        && onlyChanging(['puzzleState']);
+      allow create, delete: if false;
+    }
+
+    // Reports: a signed-in player may file one; the counter/auto-hide is done by
+    // the onReport function.
+    match /reports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.reporterUid == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Thin, append-only analytics. Client may write, never read (the metrics
+    // function reads these via the Admin SDK and writes metrics/summary).
+    match /analytics_events/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if false;
+    }
+
+    // Computed dashboard aggregates — admin-readable, function-written.
+    match /metrics/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+  }
+}
